@@ -33,6 +33,9 @@ namespace MatchDemo
         private int gridHeight;
         private Grid<CellGridPosition> grid;
 
+        private CellGrid startCell;
+        private CellGrid endCell;
+
         private void Start()
         {
             InitLevel(level);
@@ -140,7 +143,10 @@ namespace MatchDemo
             if (startCellGrid == null || endCellGrid == null) return; // Cannot move to empty space
 
             startCellGrid.SetCellXY(endX, endY);
-            endCellGrid.SetCellXY(startX, startY);           
+            endCellGrid.SetCellXY(startX, startY);
+
+            startCell = startCellGrid;
+            endCell = startCellGrid;
 
             startCellGridPosition.SetCellGrid(endCellGrid);
             endCellGridPosition.SetCellGrid(startCellGrid);
@@ -518,8 +524,24 @@ namespace MatchDemo
 
                     if (cellGridPosition.IsEmpty())
                     {
-                        //DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
-                        DemoCell cell = level.GetRevealCell();
+                        DemoCell cell = null;
+
+                        // Optimize
+                        if (startCell != null && cellGridPosition.GetX() == startCell.GetX() && cellGridPosition.GetY() == startCell.GetY())
+                        {
+                            cell = level.GetCellByType(startCell.GetCell().cellType);
+                            startCell = null;
+                        } else if (endCell != null && cellGridPosition.GetX() == endCell.GetX() && cellGridPosition.GetY() == endCell.GetY())
+                        {
+                            cell = level.GetCellByType(endCell.GetCell().cellType);
+                            endCell = null;
+                        } else
+                        {
+                            //DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
+                            cell = level.GetRevealCell();
+                        }
+
+
                         CellGrid cellGrid = new CellGrid(cell, x, y);
 
                         cellGridPosition.SetCellGrid(cellGrid);
@@ -639,6 +661,16 @@ namespace MatchDemo
             public Vector3 GetWorldPosition()
             {
                 return new Vector3(x, y);
+            }
+
+            public int GetX()
+            {
+                return x;
+            }
+
+            public int GetY()
+            {
+                return y;
             }
 
             public void SetCellXY(int x, int y)
