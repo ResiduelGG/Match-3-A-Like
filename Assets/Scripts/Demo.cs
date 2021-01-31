@@ -50,34 +50,51 @@ namespace MatchDemo
 
             grid = new Grid<CellGridPosition>(gridHeight, gridHeight, 1f, Vector3.zero, (Grid<CellGridPosition> g, int x, int y) => new CellGridPosition(g, x, y));
 
-            // Initialize Grid
-            for (int x = 0; x < gridWidth; x++)
+            bool findUniqueLevel = true;
+            int count = 0;
+
+            // Ensure starting level without matches
+            while (findUniqueLevel)
             {
-                for (int y = 0; y < gridHeight; y++)
+                count++;
+                // Initialize Grid
+                for (int x = 0; x < gridWidth; x++)
                 {
-                    //DemoLevel.LevelGridPosition levelGridPosition = null;
+                    for (int y = 0; y < gridHeight; y++)
+                    {
+                        //DemoLevel.LevelGridPosition levelGridPosition = null;
 
-                    //foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in level.levelGridPositionList)
-                    //{
-                    //    if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
-                    //    {
-                    //        levelGridPosition = tmpLevelGridPosition;
-                    //        break;
-                    //    }
-                    //}
+                        //foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in level.levelGridPositionList)
+                        //{
+                        //    if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
+                        //    {
+                        //        levelGridPosition = tmpLevelGridPosition;
+                        //        break;
+                        //    }
+                        //}
 
-                    //if (levelGridPosition == null)
-                    //{
-                    //    // Couldn't find LevelGridPosition with this x, y!
-                    //    Debug.LogError("Error! Null!");
-                    //}
+                        //if (levelGridPosition == null)
+                        //{
+                        //    // Couldn't find LevelGridPosition with this x, y!
+                        //    Debug.LogError("Error! Null!");
+                        //}
 
-                    DemoCell cell = level.GetRandomCell();
+                        DemoCell cell = level.GetRandomCell();
 
-                    CellGrid cellGrid = new CellGrid(cell, x, y);
-                    grid.GetGridObject(x, y).SetCellGrid(cellGrid);
+                        CellGrid cellGrid = new CellGrid(cell, x, y);
+                        grid.GetGridObject(x, y).SetCellGrid(cellGrid);
+                    }
+                }
+
+                List<List<CellGridPosition>> allLinkedCellGridPositionList = GetAllCellLinks();
+
+                if (allLinkedCellGridPositionList.Count == 0)
+                {
+                    findUniqueLevel = false;
                 }
             }
+
+            Debug.Log(count);
 
             OnLevelSet?.Invoke(this, new OnLevelSetEventArgs { level = level, grid = grid });
         }
@@ -146,7 +163,7 @@ namespace MatchDemo
             endCellGrid.SetCellXY(startX, startY);
 
             startCell = startCellGrid;
-            endCell = startCellGrid;
+            endCell = endCellGrid;
 
             startCellGridPosition.SetCellGrid(endCellGrid);
             endCellGridPosition.SetCellGrid(startCellGrid);
@@ -169,6 +186,9 @@ namespace MatchDemo
             DemoCell newCell = level.GetRandomMatchCell();
             CellGrid newCellGrid = new CellGrid(newCell, X, Y);
             grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
+
+            startCell = newCellGrid;
+            endCell = null;
 
             // Trigger new cell spawn to update visual
             OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
@@ -529,11 +549,11 @@ namespace MatchDemo
                         // Optimize
                         if (startCell != null && cellGridPosition.GetX() == startCell.GetX() && cellGridPosition.GetY() == startCell.GetY())
                         {
-                            cell = level.GetCellByType(startCell.GetCell().cellType);
+                            cell = level.GetCellByName(startCell.GetCell().cellName);
                             startCell = null;
                         } else if (endCell != null && cellGridPosition.GetX() == endCell.GetX() && cellGridPosition.GetY() == endCell.GetY())
                         {
-                            cell = level.GetCellByType(endCell.GetCell().cellType);
+                            cell = level.GetCellByName(endCell.GetCell().cellName);
                             endCell = null;
                         } else
                         {

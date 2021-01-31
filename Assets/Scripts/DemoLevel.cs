@@ -38,11 +38,11 @@ namespace MatchDemo
             return revelCell;
         }
 
-        public DemoCell GetCellByType(DemoCell.Type cellType)
+        public DemoCell GetCellByName(string cellName)
         {
-            DemoCell revelCell = cellList.Find(cell => cell.cellType == cellType);
+            DemoCell cellByname = cellList.Find(cell => cell.cellName == cellName);
 
-            return revelCell;
+            return cellByname;
         }
     }
 }
