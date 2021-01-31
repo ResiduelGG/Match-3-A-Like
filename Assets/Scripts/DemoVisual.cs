@@ -94,7 +94,7 @@ namespace MatchDemo
         private void Demo_OnNewCellGridSpawned(object sender, Demo.OnNewCellGridSpawnedEventArgs e)
         {
             Vector3 position = e.cellGridPosition.GetWorldPosition();
-            position = new Vector3(position.x, 12);
+            //position = new Vector3(position.x, 12); // Falling blocks
 
             Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
             cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>().sprite = e.cellGrid.GetCell().sprite;
@@ -135,49 +135,54 @@ namespace MatchDemo
                         grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
 
                         startDragMouseWorldPosition = mouseWorldPosition;
-
-                        Debug.Log(startDragX + ", " + startDragY);
-                        Debug.Log(startDragMouseWorldPosition);
                     }
 
                     if (Input.GetMouseButtonUp(0))
                     {
                         Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
                         grid.GetXY(mouseWorldPosition, out int x, out int y);
-                                     Debug.Log(x + ", " + y);
-                    Debug.Log(mouseWorldPosition);
-                        if (x != startDragX)
-                        {
-                            // Different X
-                            y = startDragY;
 
-                            if (x < startDragX)
-                            {
-                                x = startDragX - 1;
-                            }
-                            else
-                            {
-                                x = startDragX + 1;
-                            }
+                        // Clean Up
+                        if (demo.CanRevealGridPosition(startDragX, startDragY, x, y))
+                        {
+                            RevealGridPosition(startDragX, startDragY);
                         }
                         else
                         {
-                            // Different Y
-                            x = startDragX;
-
-                            if (y < startDragY)
+                            if (x != startDragX)
                             {
-                                y = startDragY - 1;
+                                // Different X
+                                y = startDragY;
+
+                                if (x < startDragX)
+                                {
+                                    x = startDragX - 1;
+                                }
+                                else
+                                {
+                                    x = startDragX + 1;
+                                }
                             }
                             else
                             {
-                                y = startDragY + 1;
-                            }
-                        }
+                                // Different Y
+                                x = startDragX;
 
-                        if (demo.CanSwapGridPositions(startDragX, startDragY, x, y))
-                        {
-                            SwapGridPositions(startDragX, startDragY, x, y);
+                                if (y < startDragY)
+                                {
+                                    y = startDragY - 1;
+                                }
+                                else
+                                {
+                                    y = startDragY + 1;
+                                }
+                            }
+
+
+                            if (demo.CanSwapGridPositions(startDragX, startDragY, x, y))
+                            {
+                                SwapGridPositions(startDragX, startDragY, x, y);
+                            }
                         }
                     }
                     break;
@@ -185,7 +190,7 @@ namespace MatchDemo
                     if (demo.TryFindMatchesAndDestroyThem())
                     {
                         SetBusyState(.3f, () => {
-                            demo.FallCellIntoEmptyPositions();
+                            //demo.FallCellIntoEmptyPositions();
 
                             SetBusyState(.3f, () => {
                                 demo.SpawnNewMissingGridPositions();
@@ -244,6 +249,14 @@ namespace MatchDemo
         public void SwapGridPositions(int startX, int startY, int endX, int endY)
         {
             demo.SwapGridPositions(startX, startY, endX, endY);
+            demo.UseMove();
+
+            SetBusyState(.5f, () => SetState(State.TryFindMatches));
+        }
+
+        public void RevealGridPosition(int X, int Y)
+        {
+            demo.RevealGridPosition(X, Y);
             demo.UseMove();
 
             SetBusyState(.5f, () => SetState(State.TryFindMatches));

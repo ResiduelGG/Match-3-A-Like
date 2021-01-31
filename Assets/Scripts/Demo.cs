@@ -69,7 +69,7 @@ namespace MatchDemo
                     //    Debug.LogError("Error! Null!");
                     //}
 
-                    DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
+                    DemoCell cell = level.GetRandomCell();
 
                     CellGrid cellGrid = new CellGrid(cell, x, y);
                     grid.GetGridObject(x, y).SetCellGrid(cellGrid);
@@ -79,11 +79,42 @@ namespace MatchDemo
             OnLevelSet?.Invoke(this, new OnLevelSetEventArgs { level = level, grid = grid });
         }
 
+        public bool CanRevealGridPosition(int startX, int startY, int endX, int endY)
+        {
+            if (!IsValidPosition(startX, startY) || !IsValidPosition(endX, endY)) return false; // Invalid Position
+
+            if (startX != endX || startY != endY) return false; // Not the same position
+
+            CellGridPosition revealGridPosition = grid.GetGridObject(startX, startY);
+
+            if (!revealGridPosition.HasCellGrid()) return false;
+
+            CellGrid revealCellGrid = revealGridPosition.GetCellGrid();
+            DemoCell revealCell = revealCellGrid.GetCell();
+
+            if (revealCell.cellType != DemoCell.Type.Reveal) return false;
+
+            return true;
+        }
+
         public bool CanSwapGridPositions(int startX, int startY, int endX, int endY)
         {
             if (!IsValidPosition(startX, startY) || !IsValidPosition(endX, endY)) return false; // Invalid Position
 
             if (startX == endX && startY == endY) return false; // Same Position
+
+            CellGridPosition startSwapGridPosition = grid.GetGridObject(startX, startY);
+            CellGridPosition endSwapGridPosition = grid.GetGridObject(endX, endY);
+
+            CellGrid startSwapCellGrid = startSwapGridPosition.GetCellGrid();
+            CellGrid endSwapCellGrid = endSwapGridPosition.GetCellGrid();
+
+            if (startSwapCellGrid == null || endSwapCellGrid == null) return false; // Cannot move to empty space
+
+            DemoCell startSwapCell = startSwapCellGrid.GetCell();
+            DemoCell endSwapCell = endSwapCellGrid.GetCell();
+
+            if (startSwapCell.cellType != DemoCell.Type.Match || endSwapCell.cellType != DemoCell.Type.Match) return false; // One of the swap cells are invalid
 
             SwapGridPositions(startX, startY, endX, endY); // Swap
 
@@ -106,11 +137,39 @@ namespace MatchDemo
             CellGrid startCellGrid = startCellGridPosition.GetCellGrid();
             CellGrid endCellGrid = endCellGridPosition.GetCellGrid();
 
+            if (startCellGrid == null || endCellGrid == null) return; // Cannot move to empty space
+
             startCellGrid.SetCellXY(endX, endY);
-            endCellGrid.SetCellXY(startX, startY);
+            endCellGrid.SetCellXY(startX, startY);           
 
             startCellGridPosition.SetCellGrid(endCellGrid);
             endCellGridPosition.SetCellGrid(startCellGrid);
+        }
+
+        public void RevealGridPosition(int X, int Y)
+        {
+            if (!IsValidPosition(X, Y)) return; // Invalid Position
+
+            CellGridPosition revealCellGridPosition = grid.GetGridObject(X, Y);
+
+            CellGrid revealCellGrid = revealCellGridPosition.GetCellGrid();
+
+            if (!revealCellGridPosition.HasCellGrid()) return; // Cannot reveal empty space
+
+            // Remove old cell
+            TryDestroyCellGridPosition(revealCellGridPosition);
+
+            // Spawn new cell
+            DemoCell newCell = level.GetRandomMatchCell();
+            CellGrid newCellGrid = new CellGrid(newCell, X, Y);
+            grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
+
+            // Trigger new cell spawn to update visual
+            OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
+            {
+                cellGrid = newCellGrid,
+                cellGridPosition = revealCellGridPosition,
+            });
         }
 
         private bool IsValidPosition(int x, int y)
@@ -143,7 +202,7 @@ namespace MatchDemo
         {
             DemoCell cell = GetCell(x, y);
 
-            if (cell == null) return null;
+            if (cell == null || cell.cellType != DemoCell.Type.Match) return null;
 
             int rightLinkAmount = 0;
             for (int i = 1; i < gridWidth; i++)
@@ -288,27 +347,27 @@ namespace MatchDemo
                     TryDestroyCellGridPosition(cellGridPosition);
                 }
 
-                if (linkedCellGridPositionList.Count >= 4)
-                {
+                //if (linkedCellGridPositionList.Count >= 4)
+                //{
                     // More than 4 linked
                     //score += 200;
 
                     // Special Explosion Cell
-                    CellGridPosition explosionOriginCellGridPosition = linkedCellGridPositionList[0];
+                    //CellGridPosition explosionOriginCellGridPosition = linkedCellGridPositionList[0];
 
-                    int explosionX = explosionOriginCellGridPosition.GetX();
-                    int explosionY = explosionOriginCellGridPosition.GetY();
+                    //int explosionX = explosionOriginCellGridPosition.GetX();
+                    //int explosionY = explosionOriginCellGridPosition.GetY();
 
                     // Explode all 8 neighbours
-                    explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY - 1));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY - 1));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY - 1));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 0));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 0));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 1));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY + 1));
-                    explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 1));
-                }
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY - 1));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY - 1));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY - 1));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 0));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 0));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 1));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY + 1));
+                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 1));
+                //}
 
                 foundMatch = true;
             }
@@ -459,7 +518,8 @@ namespace MatchDemo
 
                     if (cellGridPosition.IsEmpty())
                     {
-                        DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
+                        //DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
+                        DemoCell cell = level.GetRevealCell();
                         CellGrid cellGrid = new CellGrid(cell, x, y);
 
                         cellGridPosition.SetCellGrid(cellGrid);

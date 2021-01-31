@@ -18,5 +18,31 @@ namespace MatchDemo
             public int x;
             public int y;
         }
+
+        public DemoCell GetRandomCell()
+        {
+            return cellList[UnityEngine.Random.Range(0, cellList.Count)];
+        }
+
+        public DemoCell GetRandomMatchCell()
+        {
+            List<DemoCell> tmpList = cellList.FindAll(cell => cell.cellType == DemoCell.Type.Match);
+
+            return tmpList[UnityEngine.Random.Range(0, tmpList.Count)];
+        }
+
+        public DemoCell GetRevealCell()
+        {
+            DemoCell revelCell = cellList.Find(cell => cell.cellType == DemoCell.Type.Reveal);
+
+            return revelCell;
+        }
+
+        public DemoCell GetCellByType(DemoCell.Type cellType)
+        {
+            DemoCell revelCell = cellList.Find(cell => cell.cellType == cellType);
+
+            return revelCell;
+        }
     }
 }
