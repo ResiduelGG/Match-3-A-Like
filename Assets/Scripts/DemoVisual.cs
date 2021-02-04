@@ -14,6 +14,7 @@ namespace MatchDemo
             Busy,
             WaitingForUser,
             TryFindMatches,
+            TrySpawnMissing,
             GameOver,
         }
 
@@ -183,6 +184,11 @@ namespace MatchDemo
                             {
                                 SwapGridPositions(startDragX, startDragY, x, y);
                             }
+
+                            if (demo.CanStepOverGridPositions(startDragX, startDragY, x, y))
+                            {
+                                StepOverGridPositions(startDragX, startDragY, x, y);
+                            }
                         }
                     }
                     break;
@@ -203,6 +209,13 @@ namespace MatchDemo
                     {
                         TrySetStateWaitingForUser();
                     }
+                    break;
+                case State.TrySpawnMissing:
+                    SetBusyState(.3f, () => {
+                        demo.SpawnNewMissingGridPositions();
+
+                        SetBusyState(.5f, () => SetState(State.TryFindMatches));
+                    });
                     break;
                 case State.GameOver:
                     break;
@@ -252,6 +265,15 @@ namespace MatchDemo
             demo.UseMove();
 
             SetBusyState(.5f, () => SetState(State.TryFindMatches));
+        }
+
+        public void StepOverGridPositions(int startX, int startY, int endX, int endY)
+        {
+            demo.StepOverGridPositions(startX, startY, endX, endY);
+            demo.UseMove();
+
+            SetState(State.TrySpawnMissing);
+            //SetBusyState(.5f, () => SetState(State.TryFindMatches));
         }
 
         public void RevealGridPosition(int X, int Y)
