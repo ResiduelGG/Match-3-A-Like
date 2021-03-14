@@ -62,24 +62,31 @@ namespace MatchDemo
                 {
                     for (int y = 0; y < gridHeight; y++)
                     {
-                        //DemoLevel.LevelGridPosition levelGridPosition = null;
+                        DemoLevel.LevelGridPosition levelGridPosition = null;
 
-                        //foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in level.levelGridPositionList)
-                        //{
-                        //    if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
-                        //    {
-                        //        levelGridPosition = tmpLevelGridPosition;
-                        //        break;
-                        //    }
-                        //}
+                        foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in level.levelGridPositionList)
+                        {
+                            if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
+                            {
+                                levelGridPosition = tmpLevelGridPosition;
+                                break;
+                            }
+                        }
 
-                        //if (levelGridPosition == null)
-                        //{
-                        //    // Couldn't find LevelGridPosition with this x, y!
-                        //    Debug.LogError("Error! Null!");
-                        //}
+                        DemoCell cell = null;
 
-                        DemoCell cell = level.GetRandomCell();
+                        if (levelGridPosition == null)
+                        {
+                            // Couldn't find LevelGridPosition with this x, y!
+                            //Debug.LogError("Error! Null!");
+
+                            cell = level.GetRandomCell();
+                        } else
+                        {
+
+                            cell = levelGridPosition.cell;
+                        }
+
 
                         CellGrid cellGrid = new CellGrid(cell, x, y);
                         grid.GetGridObject(x, y).SetCellGrid(cellGrid);
@@ -162,6 +169,7 @@ namespace MatchDemo
             DemoCell startSwapCell = startSwapCellGrid.GetCell();
             DemoCell endSwapCell = endSwapCellGrid.GetCell();
 
+            if (startSwapCell.cellType == DemoCell.Type.Reveal || endSwapCell.cellType == DemoCell.Type.Reveal) return false; // Can only step over match cells
             if (startSwapCell.cellType != endSwapCell.cellType) return false; // One of the swap cells are not of the same type
             if (startSwapCell.cellName != endSwapCell.cellName) return false; // One of the swap cells are not of the same name
 
@@ -203,11 +211,14 @@ namespace MatchDemo
             startCellGrid.SetCellXY(endX, endY);
             endCellGrid.SetCellXY(startX, startY);
 
+            DemoCell startSwapCell = startCellGrid.GetCell();
+            DemoCell endSwapCell = endCellGrid.GetCell();
+
             // Save swapped cell data for later comparison for reveal and combine
             if (!swapCheck)
             {
-                savedStartCell = new SavedCellData(startCellGrid.GetCell().cellName, endX, endY);
-                savedEndCell = new SavedCellData(endCellGrid.GetCell().cellName, startX, startY);
+                savedStartCell = new SavedCellData(startCellGrid.GetCell().cellName, endX, endY, startCellGrid.GetCell().cellIndex, startSwapCell.cellType);
+                savedEndCell = new SavedCellData(endCellGrid.GetCell().cellName, startX, startY, endCellGrid.GetCell().cellIndex, endSwapCell.cellType);
             }
 
             startCellGridPosition.SetCellGrid(endCellGrid);
@@ -261,7 +272,7 @@ namespace MatchDemo
             startSwapCellGrid.SetCellXY(stepOverPositionX, stepOverPositionY);
 
             // Save swapped cell data for later comparison for reveal and combine
-            savedStartCell = new SavedCellData(startSwapCellGrid.GetCell().cellName, stepOverPositionX, stepOverPositionY);
+            savedStartCell = new SavedCellData(startSwapCellGrid.GetCell().cellName, stepOverPositionX, stepOverPositionY, startSwapCellGrid.GetCell().cellIndex, stepOverCell.cellType);
             savedEndCell = null;
 
             stepOverGridPosition.SetCellGrid(startSwapCellGrid);
@@ -289,7 +300,6 @@ namespace MatchDemo
             //});
         }
 
-
         public void RevealGridPosition(int X, int Y)
         {
             if (!IsValidPosition(X, Y)) return; // Invalid Position
@@ -308,8 +318,10 @@ namespace MatchDemo
             CellGrid newCellGrid = new CellGrid(newCell, X, Y);
             grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
 
+
+
             // Update saved cell data for reveal and combine
-            savedStartCell = new SavedCellData(newCell.cellName, X, Y);
+            savedStartCell = new SavedCellData(newCell.cellName, X, Y, newCell.cellIndex, newCell.cellType);
             savedEndCell = null;
 
             // Trigger new cell spawn to update visual
@@ -486,7 +498,7 @@ namespace MatchDemo
 
             bool foundMatch = false;
 
-            List<Vector2Int> explosionGridPositionList = new List<Vector2Int>();
+            //List<Vector2Int> explosionGridPositionList = new List<Vector2Int>();
 
             foreach (List<CellGridPosition> linkedCellGridPositionList in allLinkedCellGridPositionList)
             {
@@ -535,6 +547,12 @@ namespace MatchDemo
             //}
 
             OnScoreChanged?.Invoke(this, EventArgs.Empty);
+
+            if (!foundMatch)
+            {
+                savedStartCell = null;
+                savedEndCell = null;
+            }
 
             return foundMatch;
         }
@@ -658,6 +676,9 @@ namespace MatchDemo
 
         public void SpawnNewMissingGridPositions()
         {
+            bool savedStartCellCombined = false;
+            bool savedEndCellCombined = false;
+
             for (int x = 0; x < gridWidth; x++)
             {
                 for (int y = 0; y < gridHeight; y++)
@@ -666,21 +687,30 @@ namespace MatchDemo
 
                     if (cellGridPosition.IsEmpty())
                     {
-                        DemoCell cell = null;
+                        DemoCell cell = cell = level.GetRevealCell(); ;
 
                         // Optimize
                         if (savedStartCell != null && cellGridPosition.GetX() == savedStartCell.GetX() && cellGridPosition.GetY() == savedStartCell.GetY())
                         {
-                            cell = level.GetCellByName(savedStartCell.GetCellName());
-                            savedStartCell = null;
+                            int cellIndex = savedStartCell.GetCellIndex() + 1;
+                            if (cellIndex <= 5)
+                            {
+                                cell = level.GetCellByIndex(cellIndex);
+                                savedStartCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
+                                savedStartCellCombined = true;
+                                //savedStartCell = null;
+                            }
+
                         } else if (savedEndCell != null && cellGridPosition.GetX() == savedEndCell.GetX() && cellGridPosition.GetY() == savedEndCell.GetY())
                         {
-                            cell = level.GetCellByName(savedEndCell.GetCellName());
-                            savedEndCell = null;
-                        } else
-                        {
-                            //DemoCell cell = level.cellList[UnityEngine.Random.Range(0, level.cellList.Count)];
-                            cell = level.GetRevealCell();
+                            int cellIndex = savedEndCell.GetCellIndex() + 1;
+                            if (cellIndex <= 5)
+                            {
+                                cell = level.GetCellByIndex(cellIndex);
+                                savedEndCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
+                                savedEndCellCombined = true;
+                                //savedEndCell = null;
+                            }
                         }
 
                         CellGrid cellGrid = new CellGrid(cell, x, y);
@@ -696,9 +726,14 @@ namespace MatchDemo
                 }
             }
 
-            // Makign sure no saved cells left after spawning new cells
-            savedStartCell = null;
-            savedEndCell = null;
+            // TODO - Optimyze and test
+            // Handle swap combine cases and stepover combine
+            if (!savedStartCellCombined && savedEndCellCombined) savedStartCell = new SavedCellData(savedEndCell.GetCellName(), savedEndCell.GetX(), savedEndCell.GetY(), savedEndCell.GetCellIndex(), savedEndCell.GetCellType());
+            if (!savedEndCellCombined) savedEndCell = null;
+
+            // Makign sure no saved cells left after spawning new cells, most likely not needed
+            //savedStartCell = null;
+            //savedEndCell = null;
         }
 
         private DemoCell GetCell(int x, int y)
@@ -832,19 +867,33 @@ namespace MatchDemo
     public class SavedCellData
     {
         private string cellName;
+        private int cellIndex;
         private int x;
         private int y;
+        private DemoCell.Type cellType;
 
-        public SavedCellData(string cellName, int x, int y)
+        public SavedCellData(string cellName, int x, int y, int cellIndex, DemoCell.Type cellType)
         {
             this.cellName = cellName;
             this.x = x;
             this.y = y;
+            this.cellIndex = cellIndex;
+            this.cellType = cellType;
         }
 
         public string GetCellName()
         {
             return cellName;
+        }
+
+        public int GetCellIndex()
+        {
+            return cellIndex;
+        }
+
+        public DemoCell.Type GetCellType()
+        {
+            return cellType;
         }
 
         public int GetX()

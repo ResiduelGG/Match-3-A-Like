@@ -40,9 +40,16 @@ namespace MatchDemo
 
         public DemoCell GetCellByName(string cellName)
         {
-            DemoCell cellByname = cellList.Find(cell => cell.cellName == cellName);
+            DemoCell cellByName = cellList.Find(cell => cell.cellName == cellName);
 
-            return cellByname;
+            return cellByName;
+        }
+
+        public DemoCell GetCellByIndex(int cellIndex)
+        {
+            DemoCell cellByIndex = cellList.Find(cell => cell.cellIndex == cellIndex);
+
+            return cellByIndex;
         }
     }
 }

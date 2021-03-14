@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8297108421847c743ba6b1688fe2520f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  level: {fileID: 11400000, guid: 0a6a0a886f787f349a1ba5b49fb11a98, type: 2}
+  level: {fileID: 11400000, guid: f9c746035f5732d439b0592235597f06, type: 2}
 --- !u!4 &906039798
 Transform:
   m_ObjectHideFlags: 0
@@ -220,7 +220,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 11
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2

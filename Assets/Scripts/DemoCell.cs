@@ -12,6 +12,7 @@ namespace MatchDemo
         }
 
         public string cellName;
+        public int cellIndex;
         public Sprite sprite;
         public Type cellType;
     }

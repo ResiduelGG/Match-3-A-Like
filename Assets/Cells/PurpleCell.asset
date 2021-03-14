@@ -13,4 +13,6 @@ MonoBehaviour:
   m_Name: PurpleCell
   m_EditorClassIdentifier: 
   cellName: Purple
+  cellIndex: 4
   sprite: {fileID: -7036078787358947323, guid: 155ee4717d728374b8a9a6ccccc670d9, type: 3}
+  cellType: 0

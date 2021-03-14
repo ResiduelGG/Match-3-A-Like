@@ -293,7 +293,7 @@ MonoBehaviour:
     x: 6
     y: 7
     hasGlass: 0
-  - gemSO: {fileID: 11400000, guid: 48f608c92c5d050468d379bcd56f6836, type: 2}
+  - gemSO: {fileID: 11400000, guid: 782c28e2c82278e4fbec7eff1012fb88, type: 2}
     x: 6
     y: 8
     hasGlass: 0
@@ -333,7 +333,7 @@ MonoBehaviour:
     x: 7
     y: 7
     hasGlass: 1
-  - gemSO: {fileID: 11400000, guid: 48f608c92c5d050468d379bcd56f6836, type: 2}
+  - gemSO: {fileID: 11400000, guid: 3a140927d61acb6428169a771cabfdff, type: 2}
     x: 7
     y: 8
     hasGlass: 0

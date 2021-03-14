@@ -18,8 +18,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bbe75ca2e11bcb542995e6cbbbb274f9, type: 2}
   - {fileID: 11400000, guid: ca491cb59617f5d438ce210fd88aab13, type: 2}
   - {fileID: 11400000, guid: bd8e1bb4b3876b74cb36f820b3d6ea1d, type: 2}
-  - {fileID: 11400000, guid: 64814bd12b58657478f099ce8bfc04cb, type: 2}
   - {fileID: 11400000, guid: 6431f2fde1f6aef4585504205e13c83c, type: 2}
-  width: 6
-  height: 6
+  width: 10
+  height: 10
   levelGridPositionList: []

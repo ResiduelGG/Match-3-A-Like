@@ -13,4 +13,6 @@ MonoBehaviour:
   m_Name: PinkCell
   m_EditorClassIdentifier: 
   cellName: Pink
+  cellIndex: 3
   sprite: {fileID: -2919826975703045444, guid: 155ee4717d728374b8a9a6ccccc670d9, type: 3}
+  cellType: 0
