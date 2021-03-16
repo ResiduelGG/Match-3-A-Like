@@ -9,6 +9,7 @@ namespace MatchDemo
         public List<DemoCell> cellList;
         public int width;
         public int height;
+        public bool generateRandomCells;
         public List<LevelGridPosition> levelGridPositionList;
 
         [System.Serializable]

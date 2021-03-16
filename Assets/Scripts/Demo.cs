@@ -28,9 +28,11 @@ namespace MatchDemo
         }
 
         [SerializeField] private DemoLevel level;
+        [SerializeField] private Vector2 gridPositionOffset;
         
         private int gridWidth;
         private int gridHeight;
+        private bool generateRandomCells;
         private Grid<CellGridPosition> grid;
 
         private SavedCellData savedStartCell;
@@ -47,8 +49,9 @@ namespace MatchDemo
 
             gridWidth = level.width;
             gridHeight = level.height;
+            generateRandomCells = level.generateRandomCells;
 
-            grid = new Grid<CellGridPosition>(gridHeight, gridHeight, 1f, Vector3.zero, (Grid<CellGridPosition> g, int x, int y) => new CellGridPosition(g, x, y));
+            grid = new Grid<CellGridPosition>(gridWidth, gridHeight, 1f, Vector2.zero + gridPositionOffset, (Grid<CellGridPosition> g, int x, int y) => new CellGridPosition(g, x, y));
 
             bool findUniqueLevel = true;
             int count = 0;
@@ -75,12 +78,17 @@ namespace MatchDemo
 
                         DemoCell cell = null;
 
+                        // TODO - Clean Up
                         if (levelGridPosition == null)
                         {
-                            // Couldn't find LevelGridPosition with this x, y!
-                            //Debug.LogError("Error! Null!");
-
-                            cell = level.GetRandomCell();
+                            if (generateRandomCells)
+                            {
+                                cell = level.GetRandomCell();
+                            } else
+                            {
+                                cell = level.GetRevealCell();
+                            }
+                            
                         } else
                         {
 
@@ -104,6 +112,11 @@ namespace MatchDemo
             Debug.Log(count);
 
             OnLevelSet?.Invoke(this, new OnLevelSetEventArgs { level = level, grid = grid });
+        }
+
+        public Vector3 GetGridPositionOffset()
+        {
+            return new Vector3(gridPositionOffset.x, gridPositionOffset.y, 0);
         }
 
         public bool CanRevealGridPosition(int startX, int startY, int endX, int endY)
@@ -317,7 +330,6 @@ namespace MatchDemo
             DemoCell newCell = level.GetRandomMatchCell();
             CellGrid newCellGrid = new CellGrid(newCell, X, Y);
             grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
-
 
 
             // Update saved cell data for reveal and combine
@@ -698,7 +710,6 @@ namespace MatchDemo
                                 cell = level.GetCellByIndex(cellIndex);
                                 savedStartCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
                                 savedStartCellCombined = true;
-                                //savedStartCell = null;
                             }
 
                         } else if (savedEndCell != null && cellGridPosition.GetX() == savedEndCell.GetX() && cellGridPosition.GetY() == savedEndCell.GetY())
@@ -709,7 +720,6 @@ namespace MatchDemo
                                 cell = level.GetCellByIndex(cellIndex);
                                 savedEndCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
                                 savedEndCellCombined = true;
-                                //savedEndCell = null;
                             }
                         }
 
@@ -726,14 +736,9 @@ namespace MatchDemo
                 }
             }
 
-            // TODO - Optimyze and test
-            // Handle swap combine cases and stepover combine
-            if (!savedStartCellCombined && savedEndCellCombined) savedStartCell = new SavedCellData(savedEndCell.GetCellName(), savedEndCell.GetX(), savedEndCell.GetY(), savedEndCell.GetCellIndex(), savedEndCell.GetCellType());
+            // Remove stored cell if it was not combined initially, not spawn new cell if it is combined later
+            if (!savedStartCellCombined && savedEndCellCombined) savedStartCell = null; // Double check to exclude step over case when only start cell is present
             if (!savedEndCellCombined) savedEndCell = null;
-
-            // Makign sure no saved cells left after spawning new cells, most likely not needed
-            //savedStartCell = null;
-            //savedEndCell = null;
         }
 
         private DemoCell GetCell(int x, int y)

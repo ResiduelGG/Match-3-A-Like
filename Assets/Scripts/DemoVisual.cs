@@ -78,7 +78,7 @@ namespace MatchDemo
                     Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, grid.GetWorldPosition(x, y), Quaternion.identity);
                     cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>().sprite = cellGrid.GetCell().sprite;
 
-                    CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, cellGrid);
+                    CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, cellGrid, demo.GetGridPositionOffset());
 
                     cellGridDictionary[cellGrid] = cellGridVisual;
 
@@ -100,7 +100,7 @@ namespace MatchDemo
             Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
             cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>().sprite = e.cellGrid.GetCell().sprite;
 
-            CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, e.cellGrid);
+            CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, e.cellGrid, demo.GetGridPositionOffset());
 
             cellGridDictionary[e.cellGrid] = cellGridVisual;
         }
@@ -226,11 +226,13 @@ namespace MatchDemo
         {
             private Transform transform;
             private Demo.CellGrid cellGrid;
+            private Vector3 cellGridVisdualOffset;
 
-            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid)
+            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid, Vector3 cellGridVisdualOffset)
             {
                 this.transform = transform;
                 this.cellGrid = cellGrid;
+                this.cellGridVisdualOffset = cellGridVisdualOffset;
 
                 cellGrid.OnDestroyed += CellGrid_OnDestroyed;
             }
@@ -244,7 +246,7 @@ namespace MatchDemo
 
             public void Update()
             {
-                Vector3 targetPosition = cellGrid.GetWorldPosition();
+                Vector3 targetPosition = cellGrid.GetWorldPosition() + cellGridVisdualOffset;
                 Vector3 moveDir = (targetPosition - transform.position);
                 float moveSpeed = 10f;
                 transform.position += moveDir * moveSpeed * Time.deltaTime;

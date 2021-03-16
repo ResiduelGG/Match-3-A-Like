@@ -22,6 +22,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 64814bd12b58657478f099ce8bfc04cb, type: 2}
   width: 18
   height: 18
+  generateRandomCells: 1
   levelGridPositionList:
   - cell: {fileID: 11400000, guid: c38dcf2e6d0e8d94cb3fb0b64e8f1905, type: 2}
     x: 0
