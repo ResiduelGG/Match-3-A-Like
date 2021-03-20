@@ -40,6 +40,7 @@ namespace MatchDemo
             isSetup = false;
 
             demo.OnLevelSet += Demo_OnLevelSet;
+            demo.TryAndFindMatches += Demo_TryAndFindMatches;
         }
 
         private void Demo_OnLevelSet(object sender, Demo.OnLevelSetEventArgs e)
@@ -47,6 +48,11 @@ namespace MatchDemo
             FunctionTimer.Create(() => {
                 Setup(sender as Demo, e.grid);
             }, .1f);
+        }
+
+        private void Demo_TryAndFindMatches(object sender, EventArgs e)
+        {
+            SetBusyState(.5f, () => SetState(State.TryFindMatches));
         }
 
         public void Setup(Demo demo, Grid<Demo.CellGridPosition> grid)
@@ -143,7 +149,7 @@ namespace MatchDemo
                         Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
                         grid.GetXY(mouseWorldPosition, out int x, out int y);
 
-                        // Clean Up
+                        // ToDo - Clean Up
                         if (demo.CanRevealGridPosition(startDragX, startDragY, x, y))
                         {
                             RevealGridPosition(startDragX, startDragY);

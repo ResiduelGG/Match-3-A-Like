@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: RevealCell
   m_EditorClassIdentifier: 
   cellName: Reveal
-  sprite: {fileID: 21300000, guid: b5da6a9337e883a419c939e07581d338, type: 3}
+  cellIndex: 0
+  sprite: {fileID: 21300000, guid: 0828446cb3bc77842a217ab22a3705ef, type: 3}
   cellType: 1

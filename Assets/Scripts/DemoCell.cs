@@ -8,7 +8,8 @@ namespace MatchDemo
         public enum Type
         {
             Match,
-            Reveal
+            Reveal,
+            Combine
         }
 
         public string cellName;

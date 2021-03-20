@@ -34,9 +34,16 @@ namespace MatchDemo
 
         public DemoCell GetRevealCell()
         {
-            DemoCell revelCell = cellList.Find(cell => cell.cellType == DemoCell.Type.Reveal);
+            DemoCell revealCell = cellList.Find(cell => cell.cellType == DemoCell.Type.Reveal);
 
-            return revelCell;
+            return revealCell;
+        }
+
+        public DemoCell GetCombineCell()
+        {
+            DemoCell combineCell = cellList.Find(cell => cell.cellType == DemoCell.Type.Combine);
+
+            return combineCell;
         }
 
         public DemoCell GetCellByName(string cellName)

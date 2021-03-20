@@ -9,6 +9,8 @@ namespace MatchDemo
         public event EventHandler OnCellGridPositionDestroyed;
         public event EventHandler<OnNewCellGridSpawnedEventArgs> OnNewCellGridSpawned;
         public event EventHandler<OnLevelSetEventArgs> OnLevelSet;
+        public event EventHandler<OnStepOverEventArgs> OnStepOver;
+        public event EventHandler TryAndFindMatches;
         //public event EventHandler OnGlassDestroyed;
         public event EventHandler OnMoveUsed;
         //public event EventHandler OnOutOfMoves;
@@ -25,6 +27,11 @@ namespace MatchDemo
         {
             public DemoLevel level;
             public Grid<CellGridPosition> grid;
+        }
+
+        public class OnStepOverEventArgs : EventArgs
+        {
+            public DemoCell cell;
         }
 
         [SerializeField] private DemoLevel level;
@@ -86,12 +93,11 @@ namespace MatchDemo
                                 cell = level.GetRandomCell();
                             } else
                             {
-                                cell = level.GetRevealCell();
+                                cell = level.GetCombineCell();
                             }
                             
                         } else
                         {
-
                             cell = levelGridPosition.cell;
                         }
 
@@ -290,27 +296,8 @@ namespace MatchDemo
 
             stepOverGridPosition.SetCellGrid(startSwapCellGrid);
 
-            // Spawn reveal cells
-            //DemoCell startCell = level.GetRevealCell();
-            //DemoCell endCell = level.GetRevealCell();
-
-            //CellGrid startCellGrid = new CellGrid(startCell, startX, startY);
-            //CellGrid endCellGrid = new CellGrid(endCell, endX, endY);
-
-            //startSwapGridPosition.SetCellGrid(startCellGrid);
-            //endSwapGridPosition.SetCellGrid(endCellGrid);
-
-            //OnNewCellGridSpawned?.Invoke(startCellGrid, new OnNewCellGridSpawnedEventArgs
-            //{
-            //    cellGrid = startCellGrid,
-            //    cellGridPosition = startSwapGridPosition,
-            //});
-
-            //OnNewCellGridSpawned?.Invoke(endCellGrid, new OnNewCellGridSpawnedEventArgs
-            //{
-            //    cellGrid = endCellGrid,
-            //    cellGridPosition = endSwapGridPosition,
-            //});
+            // Move stepped over cell to combine bar
+            OnStepOver?.Invoke(this, new OnStepOverEventArgs { cell = endSwapCell });
         }
 
         public void RevealGridPosition(int X, int Y)
@@ -699,7 +686,12 @@ namespace MatchDemo
 
                     if (cellGridPosition.IsEmpty())
                     {
-                        DemoCell cell = cell = level.GetRevealCell(); ;
+                        DemoCell cell = cell = level.GetRevealCell();
+
+                        if (!level.generateRandomCells)
+                        {
+                            cell = level.GetCombineCell();
+                        }
 
                         // Optimize
                         if (savedStartCell != null && cellGridPosition.GetX() == savedStartCell.GetX() && cellGridPosition.GetY() == savedStartCell.GetY())
@@ -739,6 +731,41 @@ namespace MatchDemo
             // Remove stored cell if it was not combined initially, not spawn new cell if it is combined later
             if (!savedStartCellCombined && savedEndCellCombined) savedStartCell = null; // Double check to exclude step over case when only start cell is present
             if (!savedEndCellCombined) savedEndCell = null;
+        }
+
+        // TODO - Rework
+        public void SpawnNewCellOnClosestGridPosition(DemoCell newCell)
+        {
+            for (int x = 0; x < gridWidth; x++)
+            {
+                for (int y = 0; y < gridHeight; y++)
+                {
+                    CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
+                    CellGrid cellGrid = cellGridPosition.GetCellGrid();
+                    DemoCell cell = cellGrid.GetCell();
+
+                    if (cell != null && cell.cellType == DemoCell.Type.Combine)
+                    {
+                        TryDestroyCellGridPosition(cellGridPosition);
+
+                        CellGrid newCellGrid = new CellGrid(newCell, x, y);
+                        grid.GetGridObject(x, y).SetCellGrid(newCellGrid);
+
+                        savedStartCell = new SavedCellData(newCellGrid.GetCell().cellName, x, y, newCellGrid.GetCell().cellIndex, newCell.cellType); ;
+
+                        // Trigger new cell spawn to update visual
+                        OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
+                        {
+                            cellGrid = newCellGrid,
+                            cellGridPosition = cellGridPosition,
+                        });
+
+                        TryAndFindMatches?.Invoke(this, EventArgs.Empty);
+
+                        return;
+                    }
+                }
+            }
         }
 
         private DemoCell GetCell(int x, int y)
