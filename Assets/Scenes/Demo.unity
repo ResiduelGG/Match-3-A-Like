@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   level: {fileID: 11400000, guid: 08c816bca7d7b354ba018b57cce67526, type: 2}
-  gridPositionOffset: {x: 0, y: 7.5}
+  gridPositionOffset: {x: 0, y: 7}
 --- !u!4 &586969168
 Transform:
   m_ObjectHideFlags: 0
@@ -386,8 +386,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d093b2b37cd04e489667e8aec1df6a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grid: {fileID: 906039797}
-  bar: {fileID: 586969167}
+  demoGrid: {fileID: 906039797}
+  demoBar: {fileID: 586969167}
 --- !u!1 &1825084475
 GameObject:
   m_ObjectHideFlags: 0

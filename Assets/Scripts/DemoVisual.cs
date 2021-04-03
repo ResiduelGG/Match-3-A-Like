@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using CodeMonkey.Utils;
+using UnityEngine.UI;
 
 namespace MatchDemo
 {
@@ -12,6 +13,7 @@ namespace MatchDemo
         public enum State
         {
             Busy,
+            Drag,
             WaitingForUser,
             TryFindMatches,
             TrySpawnMissing,
@@ -135,68 +137,108 @@ namespace MatchDemo
                         onBusyTimerElapsedAction();
                     }
                     break;
-                case State.WaitingForUser:
-                    if (Input.GetMouseButtonDown(0))
+                case State.Drag:
+                    if (demo.CanDragAndDrop())
                     {
                         Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
-                        grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
+                       
+                        if (Input.GetMouseButtonUp(0))
+                        {
+                            Drop(mouseWorldPosition);
+                            break;
+                        }
 
-                        startDragMouseWorldPosition = mouseWorldPosition;
+                        grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
+                        Vector3 dragPosition = mouseWorldPosition - demo.GetGridPositionOffset();
+
+                        float x = dragPosition.x;
+                        float y = dragPosition.y;
+
+                        // Account for negative rounding
+                        if (x < 0) x--;
+                        if (y < 0) y--;
+
+                        Drag((int)x, (int)y);
                     }
 
-                    if (Input.GetMouseButtonUp(0))
+                    break;
+                case State.WaitingForUser:
+                    if (demo.CanDragAndDrop())
                     {
-                        Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
-                        grid.GetXY(mouseWorldPosition, out int x, out int y);
-
-                        // ToDo - Clean Up
-                        if (demo.CanRevealGridPosition(startDragX, startDragY, x, y))
+                        if (Input.GetMouseButtonDown(0))
                         {
-                            RevealGridPosition(startDragX, startDragY);
+                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
+                            if (demo.CanDrag(startDragX, startDragY)) {
+                                StartDrag(startDragX, startDragY);
+                                break;
+                            }
                         }
-                        else
+                    } else
+                    {
+                        if (Input.GetMouseButtonDown(0))
                         {
-                            if (x != startDragX)
-                            {
-                                // Different X
-                                y = startDragY;
+                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
 
-                                if (x < startDragX)
-                                {
-                                    x = startDragX - 1;
-                                }
-                                else
-                                {
-                                    x = startDragX + 1;
-                                }
+                            startDragMouseWorldPosition = mouseWorldPosition;
+                        }
+
+                        if (Input.GetMouseButtonUp(0))
+                        {
+                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            grid.GetXY(mouseWorldPosition, out int x, out int y);
+
+                            // ToDo - Clean Up
+                            if (demo.CanRevealGridPosition(startDragX, startDragY))
+                            {
+                                RevealGridPosition(startDragX, startDragY);
                             }
                             else
                             {
-                                // Different Y
-                                x = startDragX;
-
-                                if (y < startDragY)
+                                if (x != startDragX)
                                 {
-                                    y = startDragY - 1;
+                                    // Different X
+                                    y = startDragY;
+
+                                    if (x < startDragX)
+                                    {
+                                        x = startDragX - 1;
+                                    }
+                                    else
+                                    {
+                                        x = startDragX + 1;
+                                    }
                                 }
                                 else
                                 {
-                                    y = startDragY + 1;
+                                    // Different Y
+                                    x = startDragX;
+
+                                    if (y < startDragY)
+                                    {
+                                        y = startDragY - 1;
+                                    }
+                                    else
+                                    {
+                                        y = startDragY + 1;
+                                    }
                                 }
-                            }
 
 
-                            if (demo.CanSwapGridPositions(startDragX, startDragY, x, y))
-                            {
-                                SwapGridPositions(startDragX, startDragY, x, y);
-                            }
+                                if (demo.CanSwapGridPositions(startDragX, startDragY, x, y))
+                                {
+                                    SwapGridPositions(startDragX, startDragY, x, y);
+                                }
 
-                            if (demo.CanStepOverGridPositions(startDragX, startDragY, x, y))
-                            {
-                                StepOverGridPositions(startDragX, startDragY, x, y);
+                                if (demo.CanStepOverGridPositions(startDragX, startDragY, x, y))
+                                {
+                                    StepOverGridPositions(startDragX, startDragY, x, y);
+                                }
                             }
                         }
                     }
+
                     break;
                 case State.TryFindMatches:
                     if (demo.TryFindMatchesAndDestroyThem())
@@ -232,13 +274,13 @@ namespace MatchDemo
         {
             private Transform transform;
             private Demo.CellGrid cellGrid;
-            private Vector3 cellGridVisdualOffset;
+            private Vector3 cellGridVisualOffset;
 
-            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid, Vector3 cellGridVisdualOffset)
+            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid, Vector3 cellGridVisualOffset)
             {
                 this.transform = transform;
                 this.cellGrid = cellGrid;
-                this.cellGridVisdualOffset = cellGridVisdualOffset;
+                this.cellGridVisualOffset = cellGridVisualOffset;
 
                 cellGrid.OnDestroyed += CellGrid_OnDestroyed;
             }
@@ -252,7 +294,7 @@ namespace MatchDemo
 
             public void Update()
             {
-                Vector3 targetPosition = cellGrid.GetWorldPosition() + cellGridVisdualOffset;
+                Vector3 targetPosition = cellGrid.GetWorldPosition() + cellGridVisualOffset;
                 Vector3 moveDir = (targetPosition - transform.position);
                 float moveSpeed = 10f;
                 transform.position += moveDir * moveSpeed * Time.deltaTime;
@@ -290,6 +332,24 @@ namespace MatchDemo
             demo.UseMove();
 
             SetBusyState(.5f, () => SetState(State.TryFindMatches));
+        }
+
+        public void StartDrag(int X, int Y)
+        {
+            demo.StartDrag(X, Y);
+            SetState(State.Drag);
+        }
+        
+        public void Drag(int X, int Y)
+        {
+            demo.Drag(X, Y);
+        }
+
+        public void Drop(Vector3 dropWorldPositon)
+        {
+            demo.Drop(dropWorldPositon);
+            //SetBusyState(.5f, () => SetState(State.TryFindMatches));
+            SetBusyState(.5f, () => SetState(State.TrySpawnMissing));
         }
 
         private void SetBusyState(float busyTimer, Action onBusyTimerElapsedAction)

@@ -10,6 +10,7 @@ namespace MatchDemo
         public event EventHandler<OnNewCellGridSpawnedEventArgs> OnNewCellGridSpawned;
         public event EventHandler<OnLevelSetEventArgs> OnLevelSet;
         public event EventHandler<OnStepOverEventArgs> OnStepOver;
+        public event EventHandler<OnDropEventArgs> OnDrop;
         public event EventHandler TryAndFindMatches;
         //public event EventHandler OnGlassDestroyed;
         public event EventHandler OnMoveUsed;
@@ -34,12 +35,19 @@ namespace MatchDemo
             public DemoCell cell;
         }
 
+        public class OnDropEventArgs : EventArgs
+        {
+            public SavedCellData savedCellData;
+            public Vector3 mouseWorldPosition;
+        }
+
         [SerializeField] private DemoLevel level;
         [SerializeField] private Vector2 gridPositionOffset;
         
         private int gridWidth;
         private int gridHeight;
         private bool generateRandomCells;
+        private bool canDragAndDrop;
         private Grid<CellGridPosition> grid;
 
         private SavedCellData savedStartCell;
@@ -57,6 +65,7 @@ namespace MatchDemo
             gridWidth = level.width;
             gridHeight = level.height;
             generateRandomCells = level.generateRandomCells;
+            canDragAndDrop = level.canDragAndDrop;
 
             grid = new Grid<CellGridPosition>(gridWidth, gridHeight, 1f, Vector2.zero + gridPositionOffset, (Grid<CellGridPosition> g, int x, int y) => new CellGridPosition(g, x, y));
 
@@ -125,11 +134,32 @@ namespace MatchDemo
             return new Vector3(gridPositionOffset.x, gridPositionOffset.y, 0);
         }
 
+        public bool CanDragAndDrop()
+        {
+            return canDragAndDrop;
+        }
+
         public bool CanRevealGridPosition(int startX, int startY, int endX, int endY)
         {
             if (!IsValidPosition(startX, startY) || !IsValidPosition(endX, endY)) return false; // Invalid Position
 
             if (startX != endX || startY != endY) return false; // Not the same position
+
+            CellGridPosition revealGridPosition = grid.GetGridObject(startX, startY);
+
+            if (!revealGridPosition.HasCellGrid()) return false;
+
+            CellGrid revealCellGrid = revealGridPosition.GetCellGrid();
+            DemoCell revealCell = revealCellGrid.GetCell();
+
+            if (revealCell.cellType != DemoCell.Type.Reveal) return false;
+
+            return true;
+        }
+
+        public bool CanRevealGridPosition(int startX, int startY)
+        {
+            if (!IsValidPosition(startX, startY)) return false; // Invalid Position
 
             CellGridPosition revealGridPosition = grid.GetGridObject(startX, startY);
 
@@ -300,7 +330,7 @@ namespace MatchDemo
             OnStepOver?.Invoke(this, new OnStepOverEventArgs { cell = endSwapCell });
         }
 
-        public void RevealGridPosition(int X, int Y)
+        public void RevealGridPosition(int X, int Y, SavedCellData savedCellData = null)
         {
             if (!IsValidPosition(X, Y)) return; // Invalid Position
 
@@ -313,11 +343,13 @@ namespace MatchDemo
             // Remove old cell
             TryDestroyCellGridPosition(revealCellGridPosition);
 
-            // Spawn new cell
             DemoCell newCell = level.GetRandomMatchCell();
+
+            // Spawn new cell
+            if (savedCellData is SavedCellData) newCell = level.GetCellByName(savedCellData.GetCellName());
+
             CellGrid newCellGrid = new CellGrid(newCell, X, Y);
             grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
-
 
             // Update saved cell data for reveal and combine
             savedStartCell = new SavedCellData(newCell.cellName, X, Y, newCell.cellIndex, newCell.cellType);
@@ -329,6 +361,8 @@ namespace MatchDemo
                 cellGrid = newCellGrid,
                 cellGridPosition = revealCellGridPosition,
             });
+
+            if (savedCellData is SavedCellData) TryAndFindMatches?.Invoke(this, EventArgs.Empty);
         }
 
         private bool IsValidPosition(int x, int y)
@@ -355,6 +389,11 @@ namespace MatchDemo
         {
             //moveCount--;
             OnMoveUsed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public Grid<CellGridPosition> GetGrid()
+        {
+            return grid;
         }
 
         public List<CellGridPosition> GetCellLinks(int x, int y)
@@ -768,6 +807,88 @@ namespace MatchDemo
             }
         }
 
+        // TODO - Refactor
+        public bool CanDrag(int x, int y)
+        {
+            if (!IsValidPosition(x, y)) return false; // Invalid Position
+
+            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
+            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+
+            if (dragCellGrid == null) return false; // Cannot drag to empty space
+
+            DemoCell dragCell = dragCellGrid.GetCell();
+
+            if (dragCell.cellType != DemoCell.Type.Match) return false; // Drag cell is invalid
+
+            return true;
+        }
+
+        // TODO - Refactor
+        public void StartDrag(int x, int y)
+        {
+            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
+            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+
+            if (dragCellGrid == null) return; // Cannot drag to empty space
+
+            DemoCell dragCell = dragCellGrid.GetCell();
+
+            if (dragCell.cellType != DemoCell.Type.Match) return; // Drag cell is invalid
+
+            savedStartCell = new SavedCellData(dragCell.cellName, x, y, dragCell.cellIndex, dragCell.cellType);
+        }
+
+        // TODO - Refactor
+        public void Drag(int dragX, int dragY)
+        {
+            if (savedStartCell == null) return;
+
+            int x = savedStartCell.GetX();
+            int y = savedStartCell.GetY();
+             
+            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
+            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+
+            if (dragCellGrid == null) return; // Cannot drag to empty space
+
+            DemoCell dragCell = dragCellGrid.GetCell();
+
+            if (dragCell.cellType != DemoCell.Type.Match) return; // Drag cell is invalid
+
+            dragCellGrid.SetCellXY(dragX, dragY);
+        }
+
+        // TODO - Refactor
+        public void Drop(Vector3 dropWorldPosition)
+        {
+            if (savedStartCell == null) return;
+
+            OnDrop?.Invoke(this, new OnDropEventArgs { savedCellData = savedStartCell, mouseWorldPosition = dropWorldPosition });
+        }
+
+        public void DropSuccess()
+        {
+            if (savedStartCell == null) return;
+
+            CellGridPosition dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
+
+            TryDestroyCellGridPosition(dragCellGridPosition);
+
+            savedStartCell = null;
+        }
+
+        public void DropFailed()
+        {
+            if (savedStartCell == null) return;
+
+            CellGridPosition dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
+            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+
+            dragCellGrid.SetCellXY(savedStartCell.GetX(), savedStartCell.GetY());
+            savedStartCell = null;
+        }
+
         private DemoCell GetCell(int x, int y)
         {
             if (!IsValidPosition(x, y)) return null;
@@ -892,7 +1013,6 @@ namespace MatchDemo
                 //return isDestroyed.ToString();
                 return x + ", " + y;
             }
-
         }
     }
 

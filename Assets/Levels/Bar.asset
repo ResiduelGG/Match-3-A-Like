@@ -22,4 +22,5 @@ MonoBehaviour:
   width: 3
   height: 1
   generateRandomCells: 0
+  canDragAndDrop: 1
   levelGridPositionList: []

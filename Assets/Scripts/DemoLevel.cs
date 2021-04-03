@@ -10,6 +10,7 @@ namespace MatchDemo
         public int width;
         public int height;
         public bool generateRandomCells;
+        public bool canDragAndDrop;
         public List<LevelGridPosition> levelGridPositionList;
 
         [System.Serializable]
