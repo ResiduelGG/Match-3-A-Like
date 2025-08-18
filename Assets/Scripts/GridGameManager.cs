@@ -1,6 +1,3 @@
-using CodeMonkey.Utils;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace MatchDemo
@@ -32,9 +29,9 @@ namespace MatchDemo
             {
                 demoGrid.RevealGridPosition(dropX, dropY, e.savedCellData);
                 demoBar.DropSuccess();
-            } else
+            }
+            else
             {
-
                 demoBar.DropFailed();
             }
         }

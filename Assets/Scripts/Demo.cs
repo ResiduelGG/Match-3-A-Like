@@ -6,57 +6,39 @@ namespace MatchDemo
 {
     public class Demo : MonoBehaviour
     {
-        public event EventHandler OnCellGridPositionDestroyed;
-        public event EventHandler<OnNewCellGridSpawnedEventArgs> OnNewCellGridSpawned;
-        public event EventHandler<OnLevelSetEventArgs> OnLevelSet;
-        public event EventHandler<OnStepOverEventArgs> OnStepOver;
-        public event EventHandler<OnDropEventArgs> OnDrop;
-        public event EventHandler TryAndFindMatches;
-        //public event EventHandler OnGlassDestroyed;
-        public event EventHandler OnMoveUsed;
-        //public event EventHandler OnOutOfMoves;
-        public event EventHandler OnScoreChanged;
-        //public event EventHandler OnWin;
-
-        public class OnNewCellGridSpawnedEventArgs : EventArgs
-        {
-            public CellGrid cellGrid;
-            public CellGridPosition cellGridPosition;
-        }
-
-        public class OnLevelSetEventArgs : EventArgs
-        {
-            public DemoLevel level;
-            public Grid<CellGridPosition> grid;
-        }
-
-        public class OnStepOverEventArgs : EventArgs
-        {
-            public DemoCell cell;
-        }
-
-        public class OnDropEventArgs : EventArgs
-        {
-            public SavedCellData savedCellData;
-            public Vector3 mouseWorldPosition;
-        }
-
         [SerializeField] private DemoLevel level;
         [SerializeField] private Vector2 gridPositionOffset;
-        
-        private int gridWidth;
-        private int gridHeight;
-        private bool generateRandomCells;
         private bool canDragAndDrop;
+        private bool generateRandomCells;
         private Grid<CellGridPosition> grid;
+        private int gridHeight;
+
+        private int gridWidth;
+        private int maxCellInde;
+
+        private int maxIndex;
+        private SavedCellData savedEndCell;
 
         private SavedCellData savedStartCell;
-        private SavedCellData savedEndCell;
 
         private void Start()
         {
             InitLevel(level);
         }
+
+        public event EventHandler OnCellGridPositionDestroyed;
+        public event EventHandler<OnNewCellGridSpawnedEventArgs> OnNewCellGridSpawned;
+        public event EventHandler<OnLevelSetEventArgs> OnLevelSet;
+        public event EventHandler<OnStepOverEventArgs> OnStepOver;
+        public event EventHandler<OnDropEventArgs> OnDrop;
+
+        public event EventHandler TryAndFindMatches;
+
+        //public event EventHandler OnGlassDestroyed;
+        public event EventHandler OnMoveUsed;
+
+        //public event EventHandler OnOutOfMoves;
+        public event EventHandler OnScoreChanged;
 
         public void InitLevel(DemoLevel level)
         {
@@ -66,62 +48,54 @@ namespace MatchDemo
             gridHeight = level.height;
             generateRandomCells = level.generateRandomCells;
             canDragAndDrop = level.canDragAndDrop;
+            maxIndex = level.GetCellCount() - 1;
 
-            grid = new Grid<CellGridPosition>(gridWidth, gridHeight, 1f, Vector2.zero + gridPositionOffset, (Grid<CellGridPosition> g, int x, int y) => new CellGridPosition(g, x, y));
+            grid = new Grid<CellGridPosition>(gridWidth, gridHeight, 1f, Vector2.zero + gridPositionOffset,
+                (g, x, y) => new CellGridPosition(g, x, y));
 
-            bool findUniqueLevel = true;
-            int count = 0;
+            var findUniqueLevel = true;
+            var count = 0;
 
             // Ensure starting level without matches
             while (findUniqueLevel)
             {
                 count++;
                 // Initialize Grid
-                for (int x = 0; x < gridWidth; x++)
+                for (var x = 0; x < gridWidth; x++)
+                for (var y = 0; y < gridHeight; y++)
                 {
-                    for (int y = 0; y < gridHeight; y++)
+                    DemoLevel.LevelGridPosition levelGridPosition = null;
+
+                    foreach (var tmpLevelGridPosition in level.levelGridPositionList)
+                        if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
+                        {
+                            levelGridPosition = tmpLevelGridPosition;
+                            break;
+                        }
+
+                    DemoCell cell = null;
+
+                    // TODO - Clean Up
+                    if (levelGridPosition == null)
                     {
-                        DemoLevel.LevelGridPosition levelGridPosition = null;
-
-                        foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in level.levelGridPositionList)
-                        {
-                            if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
-                            {
-                                levelGridPosition = tmpLevelGridPosition;
-                                break;
-                            }
-                        }
-
-                        DemoCell cell = null;
-
-                        // TODO - Clean Up
-                        if (levelGridPosition == null)
-                        {
-                            if (generateRandomCells)
-                            {
-                                cell = level.GetRandomCell();
-                            } else
-                            {
-                                cell = level.GetCombineCell();
-                            }
-                            
-                        } else
-                        {
-                            cell = levelGridPosition.cell;
-                        }
-
-
-                        CellGrid cellGrid = new CellGrid(cell, x, y);
-                        grid.GetGridObject(x, y).SetCellGrid(cellGrid);
+                        if (generateRandomCells)
+                            cell = level.GetRandomCell();
+                        else
+                            cell = level.GetCombineCell();
                     }
+                    else
+                    {
+                        cell = levelGridPosition.cell;
+                    }
+
+
+                    var cellGrid = new CellGrid(cell, x, y);
+                    grid.GetGridObject(x, y).SetCellGrid(cellGrid);
                 }
 
-                List<List<CellGridPosition>> allLinkedCellGridPositionList = GetAllCellLinks();
+                var allLinkedCellGridPositionList = GetAllCellLinks();
 
-                if (allLinkedCellGridPositionList.Count == 0)
-                {
-                    findUniqueLevel = false;
-                }
+                if (allLinkedCellGridPositionList.Count == 0) findUniqueLevel = false;
             }
 
             Debug.Log(count);
@@ -145,12 +119,12 @@ namespace MatchDemo
 
             if (startX != endX || startY != endY) return false; // Not the same position
 
-            CellGridPosition revealGridPosition = grid.GetGridObject(startX, startY);
+            var revealGridPosition = grid.GetGridObject(startX, startY);
 
             if (!revealGridPosition.HasCellGrid()) return false;
 
-            CellGrid revealCellGrid = revealGridPosition.GetCellGrid();
-            DemoCell revealCell = revealCellGrid.GetCell();
+            var revealCellGrid = revealGridPosition.GetCellGrid();
+            var revealCell = revealCellGrid.GetCell();
 
             if (revealCell.cellType != DemoCell.Type.Reveal) return false;
 
@@ -161,12 +135,12 @@ namespace MatchDemo
         {
             if (!IsValidPosition(startX, startY)) return false; // Invalid Position
 
-            CellGridPosition revealGridPosition = grid.GetGridObject(startX, startY);
+            var revealGridPosition = grid.GetGridObject(startX, startY);
 
             if (!revealGridPosition.HasCellGrid()) return false;
 
-            CellGrid revealCellGrid = revealGridPosition.GetCellGrid();
-            DemoCell revealCell = revealCellGrid.GetCell();
+            var revealCellGrid = revealGridPosition.GetCellGrid();
+            var revealCell = revealCellGrid.GetCell();
 
             if (revealCell.cellType != DemoCell.Type.Reveal) return false;
 
@@ -179,22 +153,23 @@ namespace MatchDemo
 
             if (startX == endX && startY == endY) return false; // Same Position
 
-            CellGridPosition startSwapGridPosition = grid.GetGridObject(startX, startY);
-            CellGridPosition endSwapGridPosition = grid.GetGridObject(endX, endY);
+            var startSwapGridPosition = grid.GetGridObject(startX, startY);
+            var endSwapGridPosition = grid.GetGridObject(endX, endY);
 
-            CellGrid startSwapCellGrid = startSwapGridPosition.GetCellGrid();
-            CellGrid endSwapCellGrid = endSwapGridPosition.GetCellGrid();
+            var startSwapCellGrid = startSwapGridPosition.GetCellGrid();
+            var endSwapCellGrid = endSwapGridPosition.GetCellGrid();
 
             if (startSwapCellGrid == null || endSwapCellGrid == null) return false; // Cannot move to empty space
 
-            DemoCell startSwapCell = startSwapCellGrid.GetCell();
-            DemoCell endSwapCell = endSwapCellGrid.GetCell();
+            var startSwapCell = startSwapCellGrid.GetCell();
+            var endSwapCell = endSwapCellGrid.GetCell();
 
-            if (startSwapCell.cellType != DemoCell.Type.Match || endSwapCell.cellType != DemoCell.Type.Match) return false; // One of the swap cells are invalid
+            if (startSwapCell.cellType != DemoCell.Type.Match || endSwapCell.cellType != DemoCell.Type.Match)
+                return false; // One of the swap cells are invalid
 
             SwapGridPositions(startX, startY, endX, endY, true); // Swap
 
-            bool hasLinkAfterSwap = HasCellLink(startX, startY) || HasCellLink(endX, endY);
+            var hasLinkAfterSwap = HasCellLink(startX, startY) || HasCellLink(endX, endY);
 
             SwapGridPositions(startX, startY, endX, endY, true); // Swap Back
 
@@ -207,36 +182,39 @@ namespace MatchDemo
 
             if (startX == endX && startY == endY) return false; // Same Position
 
-            CellGridPosition startSwapGridPosition = grid.GetGridObject(startX, startY);
-            CellGridPosition endSwapGridPosition = grid.GetGridObject(endX, endY);
+            var startSwapGridPosition = grid.GetGridObject(startX, startY);
+            var endSwapGridPosition = grid.GetGridObject(endX, endY);
 
-            CellGrid startSwapCellGrid = startSwapGridPosition.GetCellGrid();
-            CellGrid endSwapCellGrid = endSwapGridPosition.GetCellGrid();
+            var startSwapCellGrid = startSwapGridPosition.GetCellGrid();
+            var endSwapCellGrid = endSwapGridPosition.GetCellGrid();
 
             if (startSwapCellGrid == null || endSwapCellGrid == null) return false; // Cannot move to empty space
 
-            DemoCell startSwapCell = startSwapCellGrid.GetCell();
-            DemoCell endSwapCell = endSwapCellGrid.GetCell();
+            var startSwapCell = startSwapCellGrid.GetCell();
+            var endSwapCell = endSwapCellGrid.GetCell();
 
-            if (startSwapCell.cellType == DemoCell.Type.Reveal || endSwapCell.cellType == DemoCell.Type.Reveal) return false; // Can only step over match cells
-            if (startSwapCell.cellType != endSwapCell.cellType) return false; // One of the swap cells are not of the same type
-            if (startSwapCell.cellName != endSwapCell.cellName) return false; // One of the swap cells are not of the same name
+            if (startSwapCell.cellType == DemoCell.Type.Reveal || endSwapCell.cellType == DemoCell.Type.Reveal)
+                return false; // Can only step over match cells
+            if (startSwapCell.cellType != endSwapCell.cellType)
+                return false; // One of the swap cells are not of the same type
+            if (startSwapCell.cellName != endSwapCell.cellName)
+                return false; // One of the swap cells are not of the same name
 
-            int horizontalDirection = endX - startX;
-            int verticalDirection = endY - startY;
+            var horizontalDirection = endX - startX;
+            var verticalDirection = endY - startY;
 
-            int stepOverPositionX = endX + horizontalDirection;
-            int stepOverPositionY = endY + verticalDirection;
+            var stepOverPositionX = endX + horizontalDirection;
+            var stepOverPositionY = endY + verticalDirection;
 
             if (!IsValidPosition(stepOverPositionX, stepOverPositionY)) return false; // Invalid Position
             if (endX == stepOverPositionX && endY == stepOverPositionY) return false; // Same Position
 
-            CellGridPosition stepOverGridPosition = grid.GetGridObject(stepOverPositionX, stepOverPositionY);
-            CellGrid stepOverCellGrid = stepOverGridPosition.GetCellGrid();
+            var stepOverGridPosition = grid.GetGridObject(stepOverPositionX, stepOverPositionY);
+            var stepOverCellGrid = stepOverGridPosition.GetCellGrid();
 
             if (stepOverCellGrid == null) return false; // Cannot move to empty space
 
-            DemoCell stepOverCell = stepOverCellGrid.GetCell();
+            var stepOverCell = stepOverCellGrid.GetCell();
 
             if (stepOverCell.cellType != DemoCell.Type.Reveal) return false; // Cannot move to empty space
 
@@ -249,25 +227,27 @@ namespace MatchDemo
 
             if (startX == endX && startY == endY) return; // Same Position
 
-            CellGridPosition startCellGridPosition = grid.GetGridObject(startX, startY);
-            CellGridPosition endCellGridPosition = grid.GetGridObject(endX, endY);
+            var startCellGridPosition = grid.GetGridObject(startX, startY);
+            var endCellGridPosition = grid.GetGridObject(endX, endY);
 
-            CellGrid startCellGrid = startCellGridPosition.GetCellGrid();
-            CellGrid endCellGrid = endCellGridPosition.GetCellGrid();
+            var startCellGrid = startCellGridPosition.GetCellGrid();
+            var endCellGrid = endCellGridPosition.GetCellGrid();
 
             if (startCellGrid == null || endCellGrid == null) return; // Cannot move to empty space
 
             startCellGrid.SetCellXY(endX, endY);
             endCellGrid.SetCellXY(startX, startY);
 
-            DemoCell startSwapCell = startCellGrid.GetCell();
-            DemoCell endSwapCell = endCellGrid.GetCell();
+            var startSwapCell = startCellGrid.GetCell();
+            var endSwapCell = endCellGrid.GetCell();
 
             // Save swapped cell data for later comparison for reveal and combine
             if (!swapCheck)
             {
-                savedStartCell = new SavedCellData(startCellGrid.GetCell().cellName, endX, endY, startCellGrid.GetCell().cellIndex, startSwapCell.cellType);
-                savedEndCell = new SavedCellData(endCellGrid.GetCell().cellName, startX, startY, endCellGrid.GetCell().cellIndex, endSwapCell.cellType);
+                savedStartCell = new SavedCellData(startCellGrid.GetCell().cellName, endX, endY,
+                    startCellGrid.GetCell().cellIndex, startSwapCell.cellType);
+                savedEndCell = new SavedCellData(endCellGrid.GetCell().cellName, startX, startY,
+                    endCellGrid.GetCell().cellIndex, endSwapCell.cellType);
             }
 
             startCellGridPosition.SetCellGrid(endCellGrid);
@@ -280,35 +260,37 @@ namespace MatchDemo
 
             if (startX == endX && startY == endY) return; // Same Position
 
-            CellGridPosition startSwapGridPosition = grid.GetGridObject(startX, startY);
-            CellGridPosition endSwapGridPosition = grid.GetGridObject(endX, endY);
+            var startSwapGridPosition = grid.GetGridObject(startX, startY);
+            var endSwapGridPosition = grid.GetGridObject(endX, endY);
 
-            CellGrid startSwapCellGrid = startSwapGridPosition.GetCellGrid();
-            CellGrid endSwapCellGrid = endSwapGridPosition.GetCellGrid();
+            var startSwapCellGrid = startSwapGridPosition.GetCellGrid();
+            var endSwapCellGrid = endSwapGridPosition.GetCellGrid();
 
             if (startSwapCellGrid == null || endSwapCellGrid == null) return; // Cannot move to empty space
 
-            DemoCell startSwapCell = startSwapCellGrid.GetCell();
-            DemoCell endSwapCell = endSwapCellGrid.GetCell();
+            var startSwapCell = startSwapCellGrid.GetCell();
+            var endSwapCell = endSwapCellGrid.GetCell();
 
-            if (startSwapCell.cellType != endSwapCell.cellType) return; // One of the swap cells are not of the same type
-            if (startSwapCell.cellName != endSwapCell.cellName) return; // One of the swap cells are not of the same name
+            if (startSwapCell.cellType != endSwapCell.cellType)
+                return; // One of the swap cells are not of the same type
+            if (startSwapCell.cellName != endSwapCell.cellName)
+                return; // One of the swap cells are not of the same name
 
-            int horizontalDirection = endX - startX;
-            int verticalDirection = endY - startY;
+            var horizontalDirection = endX - startX;
+            var verticalDirection = endY - startY;
 
-            int stepOverPositionX = endX + horizontalDirection;
-            int stepOverPositionY = endY + verticalDirection;
+            var stepOverPositionX = endX + horizontalDirection;
+            var stepOverPositionY = endY + verticalDirection;
 
             if (!IsValidPosition(stepOverPositionX, stepOverPositionY)) return; // Invalid Position
             if (endX == stepOverPositionX && endY == stepOverPositionY) return; // Same Position
 
-            CellGridPosition stepOverGridPosition = grid.GetGridObject(stepOverPositionX, stepOverPositionY);
-            CellGrid stepOverCellGrid = stepOverGridPosition.GetCellGrid();
+            var stepOverGridPosition = grid.GetGridObject(stepOverPositionX, stepOverPositionY);
+            var stepOverCellGrid = stepOverGridPosition.GetCellGrid();
 
             if (stepOverCellGrid == null) return; // Cannot move to empty space
 
-            DemoCell stepOverCell = stepOverCellGrid.GetCell();
+            var stepOverCell = stepOverCellGrid.GetCell();
 
             if (stepOverCell.cellType != DemoCell.Type.Reveal) return; // Cannot move to empty space
 
@@ -321,7 +303,8 @@ namespace MatchDemo
             startSwapCellGrid.SetCellXY(stepOverPositionX, stepOverPositionY);
 
             // Save swapped cell data for later comparison for reveal and combine
-            savedStartCell = new SavedCellData(startSwapCellGrid.GetCell().cellName, stepOverPositionX, stepOverPositionY, startSwapCellGrid.GetCell().cellIndex, stepOverCell.cellType);
+            savedStartCell = new SavedCellData(startSwapCellGrid.GetCell().cellName, stepOverPositionX,
+                stepOverPositionY, startSwapCellGrid.GetCell().cellIndex, stepOverCell.cellType);
             savedEndCell = null;
 
             stepOverGridPosition.SetCellGrid(startSwapCellGrid);
@@ -334,21 +317,21 @@ namespace MatchDemo
         {
             if (!IsValidPosition(X, Y)) return; // Invalid Position
 
-            CellGridPosition revealCellGridPosition = grid.GetGridObject(X, Y);
+            var revealCellGridPosition = grid.GetGridObject(X, Y);
 
-            CellGrid revealCellGrid = revealCellGridPosition.GetCellGrid();
+            var revealCellGrid = revealCellGridPosition.GetCellGrid();
 
             if (!revealCellGridPosition.HasCellGrid()) return; // Cannot reveal empty space
 
             // Remove old cell
             TryDestroyCellGridPosition(revealCellGridPosition);
 
-            DemoCell newCell = level.GetRandomMatchCell();
+            var newCell = level.GetRandomMatchCell();
 
             // Spawn new cell
             if (savedCellData is SavedCellData) newCell = level.GetCellByName(savedCellData.GetCellName());
 
-            CellGrid newCellGrid = new CellGrid(newCell, X, Y);
+            var newCellGrid = new CellGrid(newCell, X, Y);
             grid.GetGridObject(X, Y).SetCellGrid(newCellGrid);
 
             // Update saved cell data for reveal and combine
@@ -359,7 +342,7 @@ namespace MatchDemo
             OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
             {
                 cellGrid = newCellGrid,
-                cellGridPosition = revealCellGridPosition,
+                cellGridPosition = revealCellGridPosition
             });
 
             if (savedCellData is SavedCellData) TryAndFindMatches?.Invoke(this, EventArgs.Empty);
@@ -369,19 +352,14 @@ namespace MatchDemo
         {
             if (x < 0 || y < 0 ||
                 x >= gridWidth || y >= gridHeight)
-            {
                 // Invalid position
                 return false;
-            }
-            else
-            {
-                return true;
-            }
+            return true;
         }
 
         public bool HasCellLink(int x, int y)
         {
-            List<CellGridPosition> linkedCellGridPositionList = GetCellLinks(x, y);
+            var linkedCellGridPositionList = GetCellLinks(x, y);
             return linkedCellGridPositionList != null && linkedCellGridPositionList.Count >= 3;
         }
 
@@ -398,131 +376,103 @@ namespace MatchDemo
 
         public List<CellGridPosition> GetCellLinks(int x, int y)
         {
-            DemoCell cell = GetCell(x, y);
+            var cell = GetCell(x, y);
 
             if (cell == null || cell.cellType != DemoCell.Type.Match) return null;
 
-            int rightLinkAmount = 0;
-            for (int i = 1; i < gridWidth; i++)
-            {
+            var rightLinkAmount = 0;
+            for (var i = 1; i < gridWidth; i++)
                 if (IsValidPosition(x + i, y))
                 {
-                    DemoCell nextCell = GetCell(x + i, y);
+                    var nextCell = GetCell(x + i, y);
                     if (nextCell == cell)
-                    {
                         // Same Cell
                         rightLinkAmount++;
-                    }
                     else
-                    {
                         // Not same Cell
                         break;
-                    }
                 }
                 else
                 {
                     // Invalid position
                     break;
                 }
-            }
 
-            int leftLinkAmount = 0;
-            for (int i = 1; i < gridWidth; i++)
-            {
+            var leftLinkAmount = 0;
+            for (var i = 1; i < gridWidth; i++)
                 if (IsValidPosition(x - i, y))
                 {
-                    DemoCell nextCell = GetCell(x - i, y);
+                    var nextCell = GetCell(x - i, y);
                     if (nextCell == cell)
-                    {
                         // Same Cell
                         leftLinkAmount++;
-                    }
                     else
-                    {
                         // Not same Cell
                         break;
-                    }
                 }
                 else
                 {
                     // Invalid position
                     break;
                 }
-            }
 
-            int horizontalLinkAmount = 1 + leftLinkAmount + rightLinkAmount; // This Cell + left + right
+            var horizontalLinkAmount = 1 + leftLinkAmount + rightLinkAmount; // This Cell + left + right
 
             if (horizontalLinkAmount >= 3)
             {
                 // Has 3 horizontal linked cells
-                List<CellGridPosition> linkedCellGridPositionList = new List<CellGridPosition>();
-                int leftMostX = x - leftLinkAmount;
-                for (int i = 0; i < horizontalLinkAmount; i++)
-                {
+                var linkedCellGridPositionList = new List<CellGridPosition>();
+                var leftMostX = x - leftLinkAmount;
+                for (var i = 0; i < horizontalLinkAmount; i++)
                     linkedCellGridPositionList.Add(grid.GetGridObject(leftMostX + i, y));
-                }
                 return linkedCellGridPositionList;
             }
 
-            int upLinkAmount = 0;
-            for (int i = 1; i < gridHeight; i++)
-            {
+            var upLinkAmount = 0;
+            for (var i = 1; i < gridHeight; i++)
                 if (IsValidPosition(x, y + i))
                 {
-                    DemoCell nextCell = GetCell(x, y + i);
+                    var nextCell = GetCell(x, y + i);
                     if (nextCell == cell)
-                    {
                         // Same Cell
                         upLinkAmount++;
-                    }
                     else
-                    {
                         // Not same Cell
                         break;
-                    }
                 }
                 else
                 {
                     // Invalid position
                     break;
                 }
-            }
 
-            int downLinkAmount = 0;
-            for (int i = 1; i < gridHeight; i++)
-            {
+            var downLinkAmount = 0;
+            for (var i = 1; i < gridHeight; i++)
                 if (IsValidPosition(x, y - i))
                 {
-                    DemoCell nextCell = GetCell(x, y - i);
+                    var nextCell = GetCell(x, y - i);
                     if (nextCell == cell)
-                    {
                         // Same Cell
                         downLinkAmount++;
-                    }
                     else
-                    {
                         // Not same Cell
                         break;
-                    }
                 }
                 else
                 {
                     // Invalid position
                     break;
                 }
-            }
 
-            int verticalLinkAmount = 1 + downLinkAmount + upLinkAmount; // This Cell + down + up
+            var verticalLinkAmount = 1 + downLinkAmount + upLinkAmount; // This Cell + down + up
 
             if (verticalLinkAmount >= 3)
             {
                 // Has 3 vertical linked cells
-                List<CellGridPosition> linkedCellGridPositionList = new List<CellGridPosition>();
-                int downMostY = y - downLinkAmount;
-                for (int i = 0; i < verticalLinkAmount; i++)
-                {
+                var linkedCellGridPositionList = new List<CellGridPosition>();
+                var downMostY = y - downLinkAmount;
+                for (var i = 0; i < verticalLinkAmount; i++)
                     linkedCellGridPositionList.Add(grid.GetGridObject(x, downMostY + i));
-                }
                 return linkedCellGridPositionList;
             }
 
@@ -532,39 +482,37 @@ namespace MatchDemo
 
         public bool TryFindMatchesAndDestroyThem()
         {
-            List<List<CellGridPosition>> allLinkedCellGridPositionList = GetAllCellLinks();
+            var allLinkedCellGridPositionList = GetAllCellLinks();
 
-            bool foundMatch = false;
+            var foundMatch = false;
 
             //List<Vector2Int> explosionGridPositionList = new List<Vector2Int>();
 
-            foreach (List<CellGridPosition> linkedCellGridPositionList in allLinkedCellGridPositionList)
+            foreach (var linkedCellGridPositionList in allLinkedCellGridPositionList)
             {
-                foreach (CellGridPosition cellGridPosition in linkedCellGridPositionList)
-                {
+                foreach (var cellGridPosition in linkedCellGridPositionList)
                     TryDestroyCellGridPosition(cellGridPosition);
-                }
 
                 //if (linkedCellGridPositionList.Count >= 4)
                 //{
-                    // More than 4 linked
-                    //score += 200;
+                // More than 4 linked
+                //score += 200;
 
-                    // Special Explosion Cell
-                    //CellGridPosition explosionOriginCellGridPosition = linkedCellGridPositionList[0];
+                // Special Explosion Cell
+                //CellGridPosition explosionOriginCellGridPosition = linkedCellGridPositionList[0];
 
-                    //int explosionX = explosionOriginCellGridPosition.GetX();
-                    //int explosionY = explosionOriginCellGridPosition.GetY();
+                //int explosionX = explosionOriginCellGridPosition.GetX();
+                //int explosionY = explosionOriginCellGridPosition.GetY();
 
-                    // Explode all 8 neighbours
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY - 1));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY - 1));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY - 1));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 0));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 0));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 1));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY + 1));
-                    //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 1));
+                // Explode all 8 neighbours
+                //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY - 1));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY - 1));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY - 1));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 0));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 0));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX - 1, explosionY + 1));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX + 0, explosionY + 1));
+                //explosionGridPositionList.Add(new Vector2Int(explosionX + 1, explosionY + 1));
                 //}
 
                 foundMatch = true;
@@ -618,191 +566,172 @@ namespace MatchDemo
         public List<List<CellGridPosition>> GetAllCellLinks()
         {
             // Finds all the links with the current grid
-            List<List<CellGridPosition>> allLinkedCellGridPositionList = new List<List<CellGridPosition>>();
+            var allLinkedCellGridPositionList = new List<List<CellGridPosition>>();
 
-            for (int x = 0; x < gridWidth; x++)
-            {
-                for (int y = 0; y < gridHeight; y++)
+            for (var x = 0; x < gridWidth; x++)
+            for (var y = 0; y < gridHeight; y++)
+                if (HasCellLink(x, y))
                 {
-                    if (HasCellLink(x, y))
+                    var linkedCellGridPositionList = GetCellLinks(x, y);
+
+                    if (allLinkedCellGridPositionList.Count == 0)
                     {
-                        List<CellGridPosition> linkedCellGridPositionList = GetCellLinks(x, y);
+                        // First one
+                        allLinkedCellGridPositionList.Add(linkedCellGridPositionList);
+                    }
+                    else
+                    {
+                        var uniqueNewLink = true;
 
-                        if (allLinkedCellGridPositionList.Count == 0)
-                        {
-                            // First one
-                            allLinkedCellGridPositionList.Add(linkedCellGridPositionList);
-                        }
-                        else
-                        {
-                            bool uniqueNewLink = true;
-
-                            foreach (List<CellGridPosition> tmpLinkedCellGridPositionList in allLinkedCellGridPositionList)
+                        foreach (var tmpLinkedCellGridPositionList in allLinkedCellGridPositionList)
+                            if (linkedCellGridPositionList.Count == tmpLinkedCellGridPositionList.Count)
                             {
-                                if (linkedCellGridPositionList.Count == tmpLinkedCellGridPositionList.Count)
-                                {
-                                    // Same number of links
-                                    // Are they all the same?
-                                    bool allTheSame = true;
-                                    for (int i = 0; i < linkedCellGridPositionList.Count; i++)
+                                // Same number of links
+                                // Are they all the same?
+                                var allTheSame = true;
+                                for (var i = 0; i < linkedCellGridPositionList.Count; i++)
+                                    if (linkedCellGridPositionList[i] == tmpLinkedCellGridPositionList[i])
                                     {
-                                        if (linkedCellGridPositionList[i] == tmpLinkedCellGridPositionList[i])
-                                        {
-                                            // This one is the same, link is not unique
-                                        }
-                                        else
-                                        {
-                                            // These don't match
-                                            allTheSame = false;
-                                            break;
-                                        }
+                                        // This one is the same, link is not unique
+                                    }
+                                    else
+                                    {
+                                        // These don't match
+                                        allTheSame = false;
+                                        break;
                                     }
 
-                                    if (allTheSame)
-                                    {
-                                        // Nodes are all the same, not a new unique link
-                                        uniqueNewLink = false;
-                                    }
-                                }
+                                if (allTheSame)
+                                    // Nodes are all the same, not a new unique link
+                                    uniqueNewLink = false;
                             }
 
-                            // Add to the total list if it's a unique link
-                            if (uniqueNewLink)
-                            {
-                                allLinkedCellGridPositionList.Add(linkedCellGridPositionList);
-                            }
-                        }
+                        // Add to the total list if it's a unique link
+                        if (uniqueNewLink) allLinkedCellGridPositionList.Add(linkedCellGridPositionList);
                     }
                 }
-            }
 
             return allLinkedCellGridPositionList;
         }
 
         public void FallCellIntoEmptyPositions()
         {
-            for (int x = 0; x < gridWidth; x++)
+            for (var x = 0; x < gridWidth; x++)
+            for (var y = 0; y < gridHeight; y++)
             {
-                for (int y = 0; y < gridHeight; y++)
-                {
-                    CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
+                var cellGridPosition = grid.GetGridObject(x, y);
 
-                    if (!cellGridPosition.IsEmpty())
+                if (!cellGridPosition.IsEmpty())
+                    // Grid Position has Cell
+                    for (var i = y - 1; i >= 0; i--)
                     {
-                        // Grid Position has Cell
-                        for (int i = y - 1; i >= 0; i--)
+                        var nextCellGridPosition = grid.GetGridObject(x, i);
+                        if (nextCellGridPosition.IsEmpty())
                         {
-                            CellGridPosition nextCellGridPosition = grid.GetGridObject(x, i);
-                            if (nextCellGridPosition.IsEmpty())
-                            {
-                                cellGridPosition.GetCellGrid().SetCellXY(x, i);
-                                nextCellGridPosition.SetCellGrid(cellGridPosition.GetCellGrid());
-                                cellGridPosition.ClearCellGrid();
+                            cellGridPosition.GetCellGrid().SetCellXY(x, i);
+                            nextCellGridPosition.SetCellGrid(cellGridPosition.GetCellGrid());
+                            cellGridPosition.ClearCellGrid();
 
-                                cellGridPosition = nextCellGridPosition;
-                            }
-                            else
-                            {
-                                // Next Grid Position is not empty, stop looking
-                                break;
-                            }
+                            cellGridPosition = nextCellGridPosition;
+                        }
+                        else
+                        {
+                            // Next Grid Position is not empty, stop looking
+                            break;
                         }
                     }
-                }
             }
         }
 
         public void SpawnNewMissingGridPositions()
         {
-            bool savedStartCellCombined = false;
-            bool savedEndCellCombined = false;
+            var savedStartCellCombined = false;
+            var savedEndCellCombined = false;
 
-            for (int x = 0; x < gridWidth; x++)
+            for (var x = 0; x < gridWidth; x++)
+            for (var y = 0; y < gridHeight; y++)
             {
-                for (int y = 0; y < gridHeight; y++)
+                var cellGridPosition = grid.GetGridObject(x, y);
+
+                if (cellGridPosition.IsEmpty())
                 {
-                    CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
+                    DemoCell cell = cell = level.GetRevealCell();
 
-                    if (cellGridPosition.IsEmpty())
+                    if (!level.generateRandomCells) cell = level.GetCombineCell();
+
+                    // Optimize
+                    if (savedStartCell != null && cellGridPosition.GetX() == savedStartCell.GetX() &&
+                        cellGridPosition.GetY() == savedStartCell.GetY())
                     {
-                        DemoCell cell = cell = level.GetRevealCell();
-
-                        if (!level.generateRandomCells)
+                        var cellIndex = savedStartCell.GetCellIndex() + 1;
+                        if (cellIndex <= maxIndex)
                         {
-                            cell = level.GetCombineCell();
+                            cell = level.GetCellByIndex(cellIndex);
+                            savedStartCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
+                            savedStartCellCombined = true;
                         }
-
-                        // Optimize
-                        if (savedStartCell != null && cellGridPosition.GetX() == savedStartCell.GetX() && cellGridPosition.GetY() == savedStartCell.GetY())
-                        {
-                            int cellIndex = savedStartCell.GetCellIndex() + 1;
-                            if (cellIndex <= 5)
-                            {
-                                cell = level.GetCellByIndex(cellIndex);
-                                savedStartCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
-                                savedStartCellCombined = true;
-                            }
-
-                        } else if (savedEndCell != null && cellGridPosition.GetX() == savedEndCell.GetX() && cellGridPosition.GetY() == savedEndCell.GetY())
-                        {
-                            int cellIndex = savedEndCell.GetCellIndex() + 1;
-                            if (cellIndex <= 5)
-                            {
-                                cell = level.GetCellByIndex(cellIndex);
-                                savedEndCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
-                                savedEndCellCombined = true;
-                            }
-                        }
-
-                        CellGrid cellGrid = new CellGrid(cell, x, y);
-
-                        cellGridPosition.SetCellGrid(cellGrid);
-
-                        OnNewCellGridSpawned?.Invoke(cellGrid, new OnNewCellGridSpawnedEventArgs
-                        {
-                            cellGrid = cellGrid,
-                            cellGridPosition = cellGridPosition,
-                        });
                     }
+                    else if (savedEndCell != null && cellGridPosition.GetX() == savedEndCell.GetX() &&
+                             cellGridPosition.GetY() == savedEndCell.GetY())
+                    {
+                        var cellIndex = savedEndCell.GetCellIndex() + 1;
+                        if (cellIndex <= maxIndex)
+                        {
+                            cell = level.GetCellByIndex(cellIndex);
+                            savedEndCell = new SavedCellData(cell.cellName, x, y, cell.cellIndex, cell.cellType);
+                            savedEndCellCombined = true;
+                        }
+                    }
+
+                    var cellGrid = new CellGrid(cell, x, y);
+
+                    cellGridPosition.SetCellGrid(cellGrid);
+
+                    OnNewCellGridSpawned?.Invoke(cellGrid, new OnNewCellGridSpawnedEventArgs
+                    {
+                        cellGrid = cellGrid,
+                        cellGridPosition = cellGridPosition
+                    });
                 }
             }
 
             // Remove stored cell if it was not combined initially, not spawn new cell if it is combined later
-            if (!savedStartCellCombined && savedEndCellCombined) savedStartCell = null; // Double check to exclude step over case when only start cell is present
+            if (!savedStartCellCombined && savedEndCellCombined)
+                savedStartCell = null; // Double check to exclude step over case when only start cell is present
             if (!savedEndCellCombined) savedEndCell = null;
         }
 
         // TODO - Rework
         public void SpawnNewCellOnClosestGridPosition(DemoCell newCell)
         {
-            for (int x = 0; x < gridWidth; x++)
+            for (var x = 0; x < gridWidth; x++)
+            for (var y = 0; y < gridHeight; y++)
             {
-                for (int y = 0; y < gridHeight; y++)
+                var cellGridPosition = grid.GetGridObject(x, y);
+                var cellGrid = cellGridPosition.GetCellGrid();
+                var cell = cellGrid.GetCell();
+
+                if (cell != null && cell.cellType == DemoCell.Type.Combine)
                 {
-                    CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
-                    CellGrid cellGrid = cellGridPosition.GetCellGrid();
-                    DemoCell cell = cellGrid.GetCell();
+                    TryDestroyCellGridPosition(cellGridPosition);
 
-                    if (cell != null && cell.cellType == DemoCell.Type.Combine)
+                    var newCellGrid = new CellGrid(newCell, x, y);
+                    grid.GetGridObject(x, y).SetCellGrid(newCellGrid);
+
+                    savedStartCell = new SavedCellData(newCellGrid.GetCell().cellName, x, y,
+                        newCellGrid.GetCell().cellIndex, newCell.cellType);
+                    ;
+
+                    // Trigger new cell spawn to update visual
+                    OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
                     {
-                        TryDestroyCellGridPosition(cellGridPosition);
+                        cellGrid = newCellGrid,
+                        cellGridPosition = cellGridPosition
+                    });
 
-                        CellGrid newCellGrid = new CellGrid(newCell, x, y);
-                        grid.GetGridObject(x, y).SetCellGrid(newCellGrid);
+                    TryAndFindMatches?.Invoke(this, EventArgs.Empty);
 
-                        savedStartCell = new SavedCellData(newCellGrid.GetCell().cellName, x, y, newCellGrid.GetCell().cellIndex, newCell.cellType); ;
-
-                        // Trigger new cell spawn to update visual
-                        OnNewCellGridSpawned?.Invoke(newCellGrid, new OnNewCellGridSpawnedEventArgs
-                        {
-                            cellGrid = newCellGrid,
-                            cellGridPosition = cellGridPosition,
-                        });
-
-                        TryAndFindMatches?.Invoke(this, EventArgs.Empty);
-
-                        return;
-                    }
+                    return;
                 }
             }
         }
@@ -812,12 +741,12 @@ namespace MatchDemo
         {
             if (!IsValidPosition(x, y)) return false; // Invalid Position
 
-            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
-            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+            var dragCellGridPosition = grid.GetGridObject(x, y);
+            var dragCellGrid = dragCellGridPosition.GetCellGrid();
 
             if (dragCellGrid == null) return false; // Cannot drag to empty space
 
-            DemoCell dragCell = dragCellGrid.GetCell();
+            var dragCell = dragCellGrid.GetCell();
 
             if (dragCell.cellType != DemoCell.Type.Match) return false; // Drag cell is invalid
 
@@ -827,12 +756,12 @@ namespace MatchDemo
         // TODO - Refactor
         public void StartDrag(int x, int y)
         {
-            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
-            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+            var dragCellGridPosition = grid.GetGridObject(x, y);
+            var dragCellGrid = dragCellGridPosition.GetCellGrid();
 
             if (dragCellGrid == null) return; // Cannot drag to empty space
 
-            DemoCell dragCell = dragCellGrid.GetCell();
+            var dragCell = dragCellGrid.GetCell();
 
             if (dragCell.cellType != DemoCell.Type.Match) return; // Drag cell is invalid
 
@@ -844,15 +773,15 @@ namespace MatchDemo
         {
             if (savedStartCell == null) return;
 
-            int x = savedStartCell.GetX();
-            int y = savedStartCell.GetY();
-             
-            CellGridPosition dragCellGridPosition = grid.GetGridObject(x, y);
-            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+            var x = savedStartCell.GetX();
+            var y = savedStartCell.GetY();
+
+            var dragCellGridPosition = grid.GetGridObject(x, y);
+            var dragCellGrid = dragCellGridPosition.GetCellGrid();
 
             if (dragCellGrid == null) return; // Cannot drag to empty space
 
-            DemoCell dragCell = dragCellGrid.GetCell();
+            var dragCell = dragCellGrid.GetCell();
 
             if (dragCell.cellType != DemoCell.Type.Match) return; // Drag cell is invalid
 
@@ -864,14 +793,15 @@ namespace MatchDemo
         {
             if (savedStartCell == null) return;
 
-            OnDrop?.Invoke(this, new OnDropEventArgs { savedCellData = savedStartCell, mouseWorldPosition = dropWorldPosition });
+            OnDrop?.Invoke(this,
+                new OnDropEventArgs { savedCellData = savedStartCell, mouseWorldPosition = dropWorldPosition });
         }
 
         public void DropSuccess()
         {
             if (savedStartCell == null) return;
 
-            CellGridPosition dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
+            var dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
 
             TryDestroyCellGridPosition(dragCellGridPosition);
 
@@ -882,8 +812,8 @@ namespace MatchDemo
         {
             if (savedStartCell == null) return;
 
-            CellGridPosition dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
-            CellGrid dragCellGrid = dragCellGridPosition.GetCellGrid();
+            var dragCellGridPosition = grid.GetGridObject(savedStartCell.GetX(), savedStartCell.GetY());
+            var dragCellGrid = dragCellGridPosition.GetCellGrid();
 
             dragCellGrid.SetCellXY(savedStartCell.GetX(), savedStartCell.GetY());
             savedStartCell = null;
@@ -893,20 +823,42 @@ namespace MatchDemo
         {
             if (!IsValidPosition(x, y)) return null;
 
-            CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
+            var cellGridPosition = grid.GetGridObject(x, y);
 
             if (cellGridPosition.GetCellGrid() == null) return null;
 
             return cellGridPosition.GetCellGrid().GetCell();
         }
 
+        public class OnNewCellGridSpawnedEventArgs : EventArgs
+        {
+            public CellGrid cellGrid;
+            public CellGridPosition cellGridPosition;
+        }
+
+        public class OnLevelSetEventArgs : EventArgs
+        {
+            public Grid<CellGridPosition> grid;
+            public DemoLevel level;
+        }
+
+        public class OnStepOverEventArgs : EventArgs
+        {
+            public DemoCell cell;
+        }
+
+        public class OnDropEventArgs : EventArgs
+        {
+            public Vector3 mouseWorldPosition;
+            public SavedCellData savedCellData;
+        }
+
         public class CellGridPosition
         {
+            private readonly Grid<CellGridPosition> grid;
+            private readonly int y;
+            private readonly int x;
             private CellGrid cellGrid;
-
-            private Grid<CellGridPosition> grid;
-            private int x;
-            private int y;
 
             public CellGridPosition(Grid<CellGridPosition> grid, int x, int y)
             {
@@ -970,12 +922,10 @@ namespace MatchDemo
 
         public class CellGrid
         {
-            public event EventHandler OnDestroyed;
-
-            private DemoCell cell;
-            private int x;
+            private readonly DemoCell cell;
             private int y;
             private bool isDestroyed;
+            private int x;
 
             public CellGrid(DemoCell cell, int x, int y)
             {
@@ -985,6 +935,8 @@ namespace MatchDemo
 
                 isDestroyed = false;
             }
+
+            public event EventHandler OnDestroyed;
 
             public DemoCell GetCell()
             {
@@ -1018,11 +970,11 @@ namespace MatchDemo
 
     public class SavedCellData
     {
-        private string cellName;
-        private int cellIndex;
-        private int x;
-        private int y;
-        private DemoCell.Type cellType;
+        private readonly int cellIndex;
+        private readonly string cellName;
+        private readonly DemoCell.Type cellType;
+        private readonly int y;
+        private readonly int x;
 
         public SavedCellData(string cellName, int x, int y, int cellIndex, DemoCell.Type cellType)
         {

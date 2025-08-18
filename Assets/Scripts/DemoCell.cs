@@ -2,7 +2,7 @@
 
 namespace MatchDemo
 {
-    [CreateAssetMenu()]
+    [CreateAssetMenu]
     public class DemoCell : ScriptableObject
     {
         public enum Type
@@ -16,5 +16,6 @@ namespace MatchDemo
         public int cellIndex;
         public Sprite sprite;
         public Type cellType;
+        public Color tint;
     }
 }

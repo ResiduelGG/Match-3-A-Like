@@ -1,19 +1,18 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
 using CodeMonkey.Utils;
 using TMPro;
+using UnityEditor;
+using UnityEngine;
 
 namespace MatchDemo
 {
     /*
-     * Controls: 
+     * Controls:
      *   Number Keys 1-5 = Set Gem Type
      *   Right Click = Toggle Glass
      * */
     public class DemoLevelEditor : MonoBehaviour
     {
-
         [SerializeField] private DemoLevel demoLevel;
         [SerializeField] private Transform pfGemGridVisual;
         [SerializeField] private Transform cameraTransform;
@@ -23,67 +22,60 @@ namespace MatchDemo
 
         private void Awake()
         {
-            grid = new Grid<GridPosition>(demoLevel.width, demoLevel.height, 1f, Vector3.zero, (Grid<GridPosition> g, int x, int y) => new GridPosition(demoLevel, g, x, y));
+            grid = new Grid<GridPosition>(demoLevel.width, demoLevel.height, 1f, Vector3.zero,
+                (g, x, y) => new GridPosition(demoLevel, g, x, y));
 
             levelText.text = demoLevel.name;
 
-            if (demoLevel.levelGridPositionList == null || demoLevel.levelGridPositionList.Count != demoLevel.width * demoLevel.height)
+            if (demoLevel.levelGridPositionList == null ||
+                demoLevel.levelGridPositionList.Count != demoLevel.width * demoLevel.height)
             {
                 // Create new Level
                 Debug.Log("Creating new level...");
                 demoLevel.levelGridPositionList = new List<DemoLevel.LevelGridPosition>();
 
-                for (int x = 0; x < grid.GetWidth(); x++)
+                for (var x = 0; x < grid.GetWidth(); x++)
+                for (var y = 0; y < grid.GetHeight(); y++)
                 {
-                    for (int y = 0; y < grid.GetHeight(); y++)
-                    {
-                        DemoCell gem = demoLevel.cellList[Random.Range(0, demoLevel.cellList.Count)];
+                    var gem = demoLevel.cellList[Random.Range(0, demoLevel.cellList.Count)];
 
-                        DemoLevel.LevelGridPosition levelGridPosition = new DemoLevel.LevelGridPosition { x = x, y = y, cell = gem };
-                        demoLevel.levelGridPositionList.Add(levelGridPosition);
+                    var levelGridPosition = new DemoLevel.LevelGridPosition { x = x, y = y, cell = gem };
+                    demoLevel.levelGridPositionList.Add(levelGridPosition);
 
-                        CreateVisual(grid.GetGridObject(x, y), levelGridPosition);
-                    }
+                    CreateVisual(grid.GetGridObject(x, y), levelGridPosition);
                 }
             }
             else
             {
                 // Load Level
                 Debug.Log("Loading level...");
-                for (int x = 0; x < grid.GetWidth(); x++)
+                for (var x = 0; x < grid.GetWidth(); x++)
+                for (var y = 0; y < grid.GetHeight(); y++)
                 {
-                    for (int y = 0; y < grid.GetHeight(); y++)
-                    {
+                    DemoLevel.LevelGridPosition levelGridPosition = null;
 
-                        DemoLevel.LevelGridPosition levelGridPosition = null;
-
-                        foreach (DemoLevel.LevelGridPosition tmpLevelGridPosition in demoLevel.levelGridPositionList)
+                    foreach (var tmpLevelGridPosition in demoLevel.levelGridPositionList)
+                        if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
                         {
-                            if (tmpLevelGridPosition.x == x && tmpLevelGridPosition.y == y)
-                            {
-                                levelGridPosition = tmpLevelGridPosition;
-                                break;
-                            }
+                            levelGridPosition = tmpLevelGridPosition;
+                            break;
                         }
 
-                        if (levelGridPosition == null)
-                        {
-                            Debug.LogError("Error! Null!");
-                        }
+                    if (levelGridPosition == null) Debug.LogError("Error! Null!");
 
-                        CreateVisual(grid.GetGridObject(x, y), levelGridPosition);
-                    }
+                    CreateVisual(grid.GetGridObject(x, y), levelGridPosition);
                 }
             }
 
-            cameraTransform.position = new Vector3(grid.GetWidth() * .5f, grid.GetHeight() * .5f, cameraTransform.position.z);
+            cameraTransform.position =
+                new Vector3(grid.GetWidth() * .5f, grid.GetHeight() * .5f, cameraTransform.position.z);
         }
 
         private void Update()
         {
-            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+            var mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
 
-            grid.GetXY(mouseWorldPosition, out int x, out int y);
+            grid.GetXY(mouseWorldPosition, out var x, out var y);
 
             if (IsValidPosition(x, y))
             {
@@ -99,7 +91,8 @@ namespace MatchDemo
 
         private void CreateVisual(GridPosition gridPosition, DemoLevel.LevelGridPosition levelGridPosition)
         {
-            Transform gemGridVisualTransform = Instantiate(pfGemGridVisual, gridPosition.GetWorldPosition(), Quaternion.identity);
+            var gemGridVisualTransform =
+                Instantiate(pfGemGridVisual, gridPosition.GetWorldPosition(), Quaternion.identity);
 
             gridPosition.spriteRenderer = gemGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>();
             gridPosition.levelGridPosition = levelGridPosition;
@@ -111,26 +104,20 @@ namespace MatchDemo
         {
             if (x < 0 || y < 0 ||
                 x >= grid.GetWidth() || y >= grid.GetHeight())
-            {
                 // Invalid position
                 return false;
-            }
-            else
-            {
-                return true;
-            }
+            return true;
         }
 
         private class GridPosition
         {
-
-            public SpriteRenderer spriteRenderer;
+            private readonly DemoLevel demoLevel;
+            private readonly Grid<GridPosition> grid;
+            private readonly int y;
+            private readonly int x;
             public DemoLevel.LevelGridPosition levelGridPosition;
 
-            private DemoLevel demoLevel;
-            private Grid<GridPosition> grid;
-            private int x;
-            private int y;
+            public SpriteRenderer spriteRenderer;
 
             public GridPosition(DemoLevel demoLevel, Grid<GridPosition> grid, int x, int y)
             {
@@ -150,11 +137,9 @@ namespace MatchDemo
                 spriteRenderer.sprite = cell.sprite;
                 levelGridPosition.cell = cell;
 #if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(demoLevel);
+                EditorUtility.SetDirty(demoLevel);
 #endif
             }
-
         }
-
     }
 }

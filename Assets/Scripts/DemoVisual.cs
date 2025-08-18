@@ -1,15 +1,13 @@
 ﻿using System;
-using UnityEngine;
 using System.Collections.Generic;
 using CodeMonkey.Utils;
-using UnityEngine.UI;
+using JetBrains.Annotations;
+using UnityEngine;
 
 namespace MatchDemo
 {
     public class DemoVisual : MonoBehaviour
     {
-        public event EventHandler OnStateChanged;
-
         public enum State
         {
             Busy,
@@ -17,25 +15,25 @@ namespace MatchDemo
             WaitingForUser,
             TryFindMatches,
             TrySpawnMissing,
-            GameOver,
+            GameOver
         }
 
         [SerializeField] private Transform pfCellGridVisual;
         [SerializeField] private Transform pfBackgroundGridVisual;
-        [SerializeField] private Transform cameraTransform;
+        [SerializeField] [CanBeNull] private Transform cameraTransform;
         [SerializeField] private Demo demo;
-
-        private Grid<Demo.CellGridPosition> grid;
+        private float busyTimer;
         private Dictionary<Demo.CellGrid, CellGridVisual> cellGridDictionary;
 
-        private bool isSetup;
-        private State state;
-        private float busyTimer;
-        private Action onBusyTimerElapsedAction;
+        private Grid<Demo.CellGridPosition> grid;
 
-        private int startDragX;
+        private bool isSetup;
+        private Action onBusyTimerElapsedAction;
         private int startDragY;
         private Vector3 startDragMouseWorldPosition;
+
+        private int startDragX;
+        private State state;
 
         private void Awake()
         {
@@ -43,83 +41,6 @@ namespace MatchDemo
 
             demo.OnLevelSet += Demo_OnLevelSet;
             demo.TryAndFindMatches += Demo_TryAndFindMatches;
-        }
-
-        private void Demo_OnLevelSet(object sender, Demo.OnLevelSetEventArgs e)
-        {
-            FunctionTimer.Create(() => {
-                Setup(sender as Demo, e.grid);
-            }, .1f);
-        }
-
-        private void Demo_TryAndFindMatches(object sender, EventArgs e)
-        {
-            SetBusyState(.5f, () => SetState(State.TryFindMatches));
-        }
-
-        public void Setup(Demo demo, Grid<Demo.CellGridPosition> grid)
-        {
-            this.demo = demo;
-            this.grid = grid;
-
-            float cameraYOffset = 1f;
-            cameraTransform.position = new Vector3(grid.GetWidth() * .5f, grid.GetHeight() * .5f + cameraYOffset, cameraTransform.position.z);
-
-            demo.OnCellGridPositionDestroyed += Demo_OnCellGridPositionDestroyed;
-            demo.OnNewCellGridSpawned += Demo_OnNewCellGridSpawned;
-
-            // Initialize Visual
-            cellGridDictionary = new Dictionary<Demo.CellGrid, CellGridVisual>();
-
-            for (int x = 0; x < grid.GetWidth(); x++)
-            {
-                for (int y = 0; y < grid.GetHeight(); y++)
-                {
-                    Demo.CellGridPosition cellGridPosition = grid.GetGridObject(x, y);
-                    Demo.CellGrid cellGrid = cellGridPosition.GetCellGrid();
-
-                    Vector3 position = grid.GetWorldPosition(x, y);
-                    position = new Vector3(position.x, 12); // ???
-
-                    // Visual Transform
-                    //Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
-                    Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, grid.GetWorldPosition(x, y), Quaternion.identity);
-                    cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>().sprite = cellGrid.GetCell().sprite;
-
-                    CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, cellGrid, demo.GetGridPositionOffset());
-
-                    cellGridDictionary[cellGrid] = cellGridVisual;
-
-                    // Background Grid Visual
-                    Instantiate(pfBackgroundGridVisual, grid.GetWorldPosition(x, y), Quaternion.identity);
-                }
-            }
-
-            SetBusyState(.5f, () => SetState(State.TryFindMatches));
-
-            isSetup = true;
-        }
-
-        private void Demo_OnNewCellGridSpawned(object sender, Demo.OnNewCellGridSpawnedEventArgs e)
-        {
-            Vector3 position = e.cellGridPosition.GetWorldPosition();
-            //position = new Vector3(position.x, 12); // Falling blocks
-
-            Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
-            cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>().sprite = e.cellGrid.GetCell().sprite;
-
-            CellGridVisual cellGridVisual = new CellGridVisual(cellGridVisualTransform, e.cellGrid, demo.GetGridPositionOffset());
-
-            cellGridDictionary[e.cellGrid] = cellGridVisual;
-        }
-
-        private void Demo_OnCellGridPositionDestroyed(object sender, System.EventArgs e)
-        {
-            Demo.CellGridPosition cellGridPosition = sender as Demo.CellGridPosition;
-            if (cellGridPosition != null && cellGridPosition.GetCellGrid() != null)
-            {
-                cellGridDictionary.Remove(cellGridPosition.GetCellGrid());
-            }
         }
 
         private void Update()
@@ -132,16 +53,13 @@ namespace MatchDemo
             {
                 case State.Busy:
                     busyTimer -= Time.deltaTime;
-                    if (busyTimer <= 0f)
-                    {
-                        onBusyTimerElapsedAction();
-                    }
+                    if (busyTimer <= 0f) onBusyTimerElapsedAction();
                     break;
                 case State.Drag:
                     if (demo.CanDragAndDrop())
                     {
-                        Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
-                       
+                        var mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+
                         if (Input.GetMouseButtonUp(0))
                         {
                             Drop(mouseWorldPosition);
@@ -149,10 +67,10 @@ namespace MatchDemo
                         }
 
                         grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
-                        Vector3 dragPosition = mouseWorldPosition - demo.GetGridPositionOffset();
+                        var dragPosition = mouseWorldPosition - demo.GetGridPositionOffset();
 
-                        float x = dragPosition.x;
-                        float y = dragPosition.y;
+                        var x = dragPosition.x;
+                        var y = dragPosition.y;
 
                         // Account for negative rounding
                         if (x < 0) x--;
@@ -167,18 +85,16 @@ namespace MatchDemo
                     {
                         if (Input.GetMouseButtonDown(0))
                         {
-                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            var mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
                             grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
-                            if (demo.CanDrag(startDragX, startDragY)) {
-                                StartDrag(startDragX, startDragY);
-                                break;
-                            }
+                            if (demo.CanDrag(startDragX, startDragY)) StartDrag(startDragX, startDragY);
                         }
-                    } else
+                    }
+                    else
                     {
                         if (Input.GetMouseButtonDown(0))
                         {
-                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            var mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
                             grid.GetXY(mouseWorldPosition, out startDragX, out startDragY);
 
                             startDragMouseWorldPosition = mouseWorldPosition;
@@ -186,8 +102,8 @@ namespace MatchDemo
 
                         if (Input.GetMouseButtonUp(0))
                         {
-                            Vector3 mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
-                            grid.GetXY(mouseWorldPosition, out int x, out int y);
+                            var mouseWorldPosition = UtilsClass.GetMouseWorldPosition();
+                            grid.GetXY(mouseWorldPosition, out var x, out var y);
 
                             // ToDo - Clean Up
                             if (demo.CanRevealGridPosition(startDragX, startDragY))
@@ -202,13 +118,9 @@ namespace MatchDemo
                                     y = startDragY;
 
                                     if (x < startDragX)
-                                    {
                                         x = startDragX - 1;
-                                    }
                                     else
-                                    {
                                         x = startDragX + 1;
-                                    }
                                 }
                                 else
                                 {
@@ -216,25 +128,17 @@ namespace MatchDemo
                                     x = startDragX;
 
                                     if (y < startDragY)
-                                    {
                                         y = startDragY - 1;
-                                    }
                                     else
-                                    {
                                         y = startDragY + 1;
-                                    }
                                 }
 
 
                                 if (demo.CanSwapGridPositions(startDragX, startDragY, x, y))
-                                {
                                     SwapGridPositions(startDragX, startDragY, x, y);
-                                }
 
                                 if (demo.CanStepOverGridPositions(startDragX, startDragY, x, y))
-                                {
                                     StepOverGridPositions(startDragX, startDragY, x, y);
-                                }
                             }
                         }
                     }
@@ -242,24 +146,22 @@ namespace MatchDemo
                     break;
                 case State.TryFindMatches:
                     if (demo.TryFindMatchesAndDestroyThem())
-                    {
-                        SetBusyState(.3f, () => {
+                        SetBusyState(.3f, () =>
+                        {
                             //demo.FallCellIntoEmptyPositions();
-
-                            SetBusyState(.3f, () => {
+                            SetBusyState(.3f, () =>
+                            {
                                 demo.SpawnNewMissingGridPositions();
 
                                 SetBusyState(.5f, () => SetState(State.TryFindMatches));
                             });
                         });
-                    }
                     else
-                    {
                         TrySetStateWaitingForUser();
-                    }
                     break;
                 case State.TrySpawnMissing:
-                    SetBusyState(.3f, () => {
+                    SetBusyState(.3f, () =>
+                    {
                         demo.SpawnNewMissingGridPositions();
 
                         SetBusyState(.5f, () => SetState(State.TryFindMatches));
@@ -270,43 +172,95 @@ namespace MatchDemo
             }
         }
 
-        public class CellGridVisual
+        public event EventHandler OnStateChanged;
+
+        private void Demo_OnLevelSet(object sender, Demo.OnLevelSetEventArgs e)
         {
-            private Transform transform;
-            private Demo.CellGrid cellGrid;
-            private Vector3 cellGridVisualOffset;
+            FunctionTimer.Create(() => { Setup(sender as Demo, e.grid); }, .1f);
+        }
 
-            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid, Vector3 cellGridVisualOffset)
+        private void Demo_TryAndFindMatches(object sender, EventArgs e)
+        {
+            SetBusyState(.5f, () => SetState(State.TryFindMatches));
+        }
+
+        public void Setup(Demo demo, Grid<Demo.CellGridPosition> grid)
+        {
+            this.demo = demo;
+            this.grid = grid;
+
+            var cameraYOffset = 1f;
+
+            if (cameraTransform != null)
+                cameraTransform.position = new Vector3(grid.GetWidth() * .5f, grid.GetHeight() * .5f + cameraYOffset,
+                    cameraTransform.position.z);
+
+            demo.OnCellGridPositionDestroyed += Demo_OnCellGridPositionDestroyed;
+            demo.OnNewCellGridSpawned += Demo_OnNewCellGridSpawned;
+
+            // Initialize Visual
+            cellGridDictionary = new Dictionary<Demo.CellGrid, CellGridVisual>();
+
+            for (var x = 0; x < grid.GetWidth(); x++)
+            for (var y = 0; y < grid.GetHeight(); y++)
             {
-                this.transform = transform;
-                this.cellGrid = cellGrid;
-                this.cellGridVisualOffset = cellGridVisualOffset;
+                var cellGridPosition = grid.GetGridObject(x, y);
+                var cellGrid = cellGridPosition.GetCellGrid();
 
-                cellGrid.OnDestroyed += CellGrid_OnDestroyed;
+                var position = grid.GetWorldPosition(x, y);
+
+                //position = new Vector3(position.x, 0); // ???
+                // Visual Transform
+                //Transform cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
+                var cellGridVisualTransform =
+                    Instantiate(pfCellGridVisual, grid.GetWorldPosition(x, y), Quaternion.identity);
+                var spriteRenderer =
+                    cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>();
+                spriteRenderer.sprite = cellGrid.GetCell().sprite;
+                spriteRenderer.color = cellGrid.GetCell().tint;
+
+
+                var cellGridVisual =
+                    new CellGridVisual(cellGridVisualTransform, cellGrid, demo.GetGridPositionOffset());
+
+                cellGridDictionary[cellGrid] = cellGridVisual;
+
+                // Background Grid Visual
+                Instantiate(pfBackgroundGridVisual, grid.GetWorldPosition(x, y), Quaternion.identity);
             }
 
-            private void CellGrid_OnDestroyed(object sender, System.EventArgs e)
-            {
-                //transform.GetComponent<Animation>().Play();
-                //Destroy(transform.gameObject, 1f);
-                Destroy(transform.gameObject);
-            }
+            SetBusyState(.5f, () => SetState(State.TryFindMatches));
 
-            public void Update()
-            {
-                Vector3 targetPosition = cellGrid.GetWorldPosition() + cellGridVisualOffset;
-                Vector3 moveDir = (targetPosition - transform.position);
-                float moveSpeed = 10f;
-                transform.position += moveDir * moveSpeed * Time.deltaTime;
-            }
+            isSetup = true;
+        }
+
+        private void Demo_OnNewCellGridSpawned(object sender, Demo.OnNewCellGridSpawnedEventArgs e)
+        {
+            var position = e.cellGridPosition.GetWorldPosition();
+            //position = new Vector3(position.x, 12); // Falling blocks
+
+            var cellGridVisualTransform = Instantiate(pfCellGridVisual, position, Quaternion.identity);
+
+            var spriteRenderer =
+                cellGridVisualTransform.Find("sprite").GetComponent<SpriteRenderer>();
+            spriteRenderer.sprite = e.cellGrid.GetCell().sprite;
+            spriteRenderer.color = e.cellGrid.GetCell().tint;
+            
+            var cellGridVisual = new CellGridVisual(cellGridVisualTransform, e.cellGrid, demo.GetGridPositionOffset());
+
+            cellGridDictionary[e.cellGrid] = cellGridVisual;
+        }
+
+        private void Demo_OnCellGridPositionDestroyed(object sender, EventArgs e)
+        {
+            var cellGridPosition = sender as Demo.CellGridPosition;
+            if (cellGridPosition != null && cellGridPosition.GetCellGrid() != null)
+                cellGridDictionary.Remove(cellGridPosition.GetCellGrid());
         }
 
         private void UpdateVisual()
         {
-            foreach (Demo.CellGrid cellGrid in cellGridDictionary.Keys)
-            {
-                cellGridDictionary[cellGrid].Update();
-            }
+            foreach (var cellGrid in cellGridDictionary.Keys) cellGridDictionary[cellGrid].Update();
         }
 
         public void SwapGridPositions(int startX, int startY, int endX, int endY)
@@ -336,10 +290,16 @@ namespace MatchDemo
 
         public void StartDrag(int X, int Y)
         {
+            var cellGridPosition = grid.GetGridObject(X, Y);
+            var cellGrid = cellGridPosition.GetCellGrid();
+
+            var cellGridVisual = cellGridDictionary[cellGrid];
+            cellGridVisual.Up();
+
             demo.StartDrag(X, Y);
             SetState(State.Drag);
         }
-        
+
         public void Drag(int X, int Y)
         {
             demo.Drag(X, Y);
@@ -369,8 +329,8 @@ namespace MatchDemo
             //}
             //else
             //{
-                // Keep Playing
-                SetState(State.WaitingForUser);
+            // Keep Playing
+            SetState(State.WaitingForUser);
             //}
         }
 
@@ -378,6 +338,47 @@ namespace MatchDemo
         {
             this.state = state;
             OnStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public class CellGridVisual
+        {
+            private readonly Demo.CellGrid cellGrid;
+            private readonly Vector3 cellGridVisualOffset;
+            private readonly Transform transform;
+
+            public CellGridVisual(Transform transform, Demo.CellGrid cellGrid, Vector3 cellGridVisualOffset)
+            {
+                this.transform = transform;
+                this.cellGrid = cellGrid;
+                this.cellGridVisualOffset = cellGridVisualOffset;
+
+                cellGrid.OnDestroyed += CellGrid_OnDestroyed;
+            }
+
+            private void CellGrid_OnDestroyed(object sender, EventArgs e)
+            {
+                //transform.GetComponent<Animation>().Play();
+                //Destroy(transform.gameObject, 1f);
+                Destroy(transform.gameObject);
+            }
+
+            public void Update()
+            {
+                var targetPosition = cellGrid.GetWorldPosition() + cellGridVisualOffset;
+                var moveDir = targetPosition - transform.position;
+                var moveSpeed = 10f;
+                transform.position += moveDir * moveSpeed * Time.deltaTime;
+            }
+
+            public void Up()
+            {
+                transform.Find("sprite").GetComponent<SpriteRenderer>().sortingOrder += 10;
+            }
+
+            public void Down()
+            {
+                transform.Find("sprite").GetComponent<SpriteRenderer>().sortingOrder -= 10;
+            }
         }
     }
 }
